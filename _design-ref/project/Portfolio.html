@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Portfolio · Lucas Fanelli Sánchez — three directions</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Google Fonts: Newsreader (editorial serif), Inter (clean sans), JetBrains Mono (terminal) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap" rel="stylesheet" />
+
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: "Inter", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+
+  /* Smooth in-canvas anchor scrolling within each portfolio (anchors target IDs inside their own artboard). */
+  html { scroll-behavior: smooth; }
+
+  /* Hide native scrollbars inside artboards — the canvas already isolates them. */
+  .artboard-host { overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Content first (plain JS, exposes window.PORTFOLIO) -->
+<script src="content.js"></script>
+
+<!-- Canvas + tweaks shells, then each portfolio direction -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="portfolio-navy.jsx"></script>
+<script type="text/babel" src="portfolio-terminal.jsx"></script>
+<script type="text/babel" src="portfolio-editorial.jsx"></script>
+
+<!-- Editable tweak defaults: the host rewrites the JSON between these markers when the user changes a tweak, so the change survives reload. -->
+<script>
+window.TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "dark",
+  "lang": "es"
+}/*EDITMODE-END*/;
+</script>
+
+<script type="text/babel">
+const { useState } = React;
+
+function App() {
+  // Read initial state from the EDITMODE block so reload-persisted edits stick.
+  const [tweaks, setTweaks] = useState(() => ({ ...window.TWEAK_DEFAULTS }));
+
+  // useTweaks-style setter: posts to host so the EDITMODE JSON gets rewritten,
+  // and applies the change locally so the UI updates immediately.
+  const setTweak = (key, value) => {
+    setTweaks((prev) => ({ ...prev, [key]: value }));
+    try {
+      window.parent.postMessage({ type: "__edit_mode_set_keys", edits: { [key]: value } }, "*");
+    } catch (e) {}
+  };
+
+  // Each direction respects the shared theme & lang. Per-direction toggles in
+  // the artboard chrome call back through setTweak so the global panel and the
+  // in-page controls stay in sync.
+  const setTheme = (v) => setTweak("theme", v);
+  const setLang  = (v) => setTweak("lang", v);
+
+  // ───── Tweaks panel wiring ─────
+  // We expose a small floating panel that mirrors the in-artboard controls.
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const data = e.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "__activate_edit_mode") setTweaksOpen(true);
+      if (data.type === "__deactivate_edit_mode") setTweaksOpen(false);
+    };
+    window.addEventListener("message", onMsg);
+    // Tell host the toggle is available.
+    try { window.parent.postMessage({ type: "__edit_mode_available" }, "*"); } catch (e) {}
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  const directions = [
+    {
+      id: "navy",
+      label: "A · Navy Minimal",
+      subtitle: { en: "Recruiter-friendly · system sans · code as visual", es: "Apto para reclutadores · sans del sistema · código como visual" },
+      Component: window.PortfolioNavy,
+    },
+    {
+      id: "terminal",
+      label: "B · Terminal Dev",
+      subtitle: { en: "Monospace · ANSI · ASCII architecture", es: "Monoespaciado · ANSI · arquitectura ASCII" },
+      Component: window.PortfolioTerminal,
+    },
+    {
+      id: "editorial",
+      label: "C · Editorial",
+      subtitle: { en: "Serif display · magazine grid · drop caps", es: "Serif display · cuadrícula editorial · capitulares" },
+      Component: window.PortfolioEditorial,
+    },
+  ];
+
+  const ART_WIDTH = 1280;
+  const ART_HEIGHT = 3800;
+
+  return (
+    <>
+      <DesignCanvas
+        title="Portfolio · Lucas Fanelli Sánchez"
+        subtitle={`Three design directions · Color theme: ${tweaks.theme} · Lang: ${tweaks.lang.toUpperCase()}`}
+      >
+        <DCSection
+          id="directions"
+          title="Three directions"
+          subtitle="Same content, three personalities. Try the controls in each header — language and theme are wired through a shared store so you can compare like-for-like."
+        >
+          {directions.map((d) => {
+            const C = d.Component;
+            return (
+              <DCArtboard
+                key={d.id}
+                id={d.id}
+                label={d.label}
+                width={ART_WIDTH}
+                height={ART_HEIGHT}
+              >
+                <div className="artboard-host" style={{ width: "100%", height: "100%", background: "#fff" }}>
+                  {C ? (
+                    <C
+                      theme={tweaks.theme}
+                      lang={tweaks.lang}
+                      setTheme={setTheme}
+                      setLang={setLang}
+                    />
+                  ) : (
+                    <div style={{ padding: 40, color: "#a00" }}>component missing: {d.id}</div>
+                  )}
+                </div>
+              </DCArtboard>
+            );
+          })}
+        </DCSection>
+
+        <DCSection
+          id="notes"
+          title="Notes"
+          subtitle="Two-line read on the brief and where each direction leans."
+        >
+          <DCArtboard id="brief" label="Brief · context" width={840} height={520}>
+            <div style={{
+              padding: "32px 36px",
+              fontFamily: '"Inter", system-ui, sans-serif',
+              color: "#1a1f2c", fontSize: 14, lineHeight: 1.65,
+              background: "#fff", width: "100%", height: "100%",
+            }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a7385", marginBottom: 14 }}>
+                Brief
+              </div>
+              <h3 style={{ fontSize: 26, margin: "0 0 14px", letterSpacing: "-0.02em", fontWeight: 600 }}>
+                Portfolio for recruiters & internships
+              </h3>
+              <ul style={{ paddingLeft: 18, margin: "0 0 18px", color: "#3a4256" }}>
+                <li><strong>Bilingual</strong> ES ↔ EN toggle, persists per-direction.</li>
+                <li><strong>Multi-section</strong>: Hero · Work · About · Contact (in-page anchors).</li>
+                <li><strong>Three equal-weight projects</strong>: Withdrawal · Remy · SleepSync.</li>
+                <li><strong>Code & architecture diagrams</strong> as visuals — no fake screenshots.</li>
+                <li><strong>Tweakable color theme</strong>: light · dark · navy, applied globally.</li>
+                <li><strong>Contact</strong>: email, LinkedIn, GitHub (phone kept private).</li>
+              </ul>
+              <div style={{ fontSize: 12, color: "#6a7385" }}>
+                Each direction is a real prototype — click the language pill, swap themes via the dots, and open any artboard fullscreen with the ⤢ button to compare.
+              </div>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="legend" label="How to read this canvas" width={520} height={520}>
+            <div style={{
+              padding: "32px 30px",
+              fontFamily: '"Inter", system-ui, sans-serif',
+              color: "#1a1f2c", fontSize: 13.5, lineHeight: 1.7,
+              background: "#fff", width: "100%", height: "100%",
+            }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a7385", marginBottom: 14 }}>
+                Legend
+              </div>
+              <h3 style={{ fontSize: 22, margin: "0 0 16px", fontWeight: 600 }}>How to read this canvas</h3>
+              <Step n="A" title="Navy Minimal" body="Safe pick. White paper, navy accent, system sans. Looks at home on a CV link." />
+              <Step n="B" title="Terminal Dev" body="Shows the engineer. Monospace, ANSI palette, ASCII architecture plates. Strong personality." />
+              <Step n="C" title="Editorial" body="Confident & literary. Big Newsreader display, magazine grid, drop caps. Stands out." />
+              <div style={{ marginTop: 18, fontSize: 12, color: "#6a7385", paddingTop: 16, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                Toggle <strong>Tweaks</strong> in the toolbar for a global theme + language switch.
+              </div>
+            </div>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      {/* Floating Tweaks panel (host-protocol-driven visibility) */}
+      {tweaksOpen && (
+        <TweaksFloating
+          tweaks={tweaks}
+          setTweak={setTweak}
+          onClose={() => {
+            setTweaksOpen(false);
+            try { window.parent.postMessage({ type: "__edit_mode_dismissed" }, "*"); } catch (e) {}
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function Step({ n, title, body }) {
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+      <div style={{
+        width: 26, height: 26, borderRadius: 6, flex: "0 0 26px",
+        background: "#1a1f2c", color: "#fff",
+        display: "grid", placeItems: "center", fontSize: 13, fontWeight: 600,
+      }}>{n}</div>
+      <div>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: "#5b6478", lineHeight: 1.5 }}>{body}</div>
+      </div>
+    </div>
+  );
+}
+
+// Minimal floating tweaks card — uses our own chrome so it sits cleanly above
+// the canvas without competing with the per-portfolio nav controls.
+function TweaksFloating({ tweaks, setTweak, onClose }) {
+  return (
+    <div style={{
+      position: "fixed", right: 20, bottom: 20, zIndex: 9999,
+      width: 280, background: "#fff",
+      borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)",
+      fontFamily: '"Inter", system-ui, sans-serif', color: "#1a1f2c",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "14px 16px", display: "flex", alignItems: "center",
+        borderBottom: "1px solid rgba(0,0,0,0.08)",
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Tweaks</div>
+        <div style={{ flex: 1 }} />
+        <button onClick={onClose} style={{
+          width: 24, height: 24, border: 0, background: "transparent",
+          cursor: "pointer", fontSize: 16, color: "#6a7385",
+        }}>×</button>
+      </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#6a7385", marginBottom: 8 }}>
+          Color theme
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 18 }}>
+          {[
+            { id: "light", bg: "#f7f6f3", ink: "#1a1f2c" },
+            { id: "dark", bg: "#0d1117", ink: "#e6edf3" },
+            { id: "navy", bg: "#1a2c4a", ink: "#f3ecd9" },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setTweak("theme", t.id)} style={{
+              padding: "10px 8px",
+              borderRadius: 8,
+              border: tweaks.theme === t.id ? "2px solid #1a1f2c" : "1px solid rgba(0,0,0,0.1)",
+              background: t.bg, color: t.ink,
+              cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+              textTransform: "capitalize",
+            }}>{t.id}</button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#6a7385", marginBottom: 8 }}>
+          Language
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          {[
+            { id: "en", label: "English" },
+            { id: "es", label: "Español" },
+          ].map((l) => (
+            <button key={l.id} onClick={() => setTweak("lang", l.id)} style={{
+              padding: "10px",
+              borderRadius: 8,
+              border: tweaks.lang === l.id ? "2px solid #1a1f2c" : "1px solid rgba(0,0,0,0.1)",
+              background: tweaks.lang === l.id ? "#1a1f2c" : "#fff",
+              color: tweaks.lang === l.id ? "#fff" : "#1a1f2c",
+              cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 500,
+            }}>{l.label}</button>
+          ))}
+        </div>
+
+        <div style={{
+          marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.06)",
+          fontSize: 11, color: "#6a7385", lineHeight: 1.5,
+        }}>
+          Changes apply to all three directions live and persist on reload.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+</body>
+</html>

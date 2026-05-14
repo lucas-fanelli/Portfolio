@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Portfolio · Lucas Fanelli Sánchez</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Shared content + the two designs we kept -->
+<script src="content.js"></script>
+<script type="text/babel" src="portfolio-navy.jsx"></script>
+<script type="text/babel" src="portfolio-terminal.jsx"></script>
+
+<!-- Persisted defaults. Host rewrites this JSON when the user changes a tweak. -->
+<script>
+window.TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "design": "navy",
+  "theme": "dark",
+  "lang": "en"
+}/*EDITMODE-END*/;
+</script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// Single full-bleed app. The "design" tweak picks the renderer; theme + lang
+// flow through to whichever is mounted. All state is persisted via the host
+// EDITMODE protocol so reloads keep the user's choices.
+function App() {
+  const [tweaks, setTweaks] = useState(() => ({ ...window.TWEAK_DEFAULTS }));
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  const setTweak = (key, value) => {
+    setTweaks((prev) => ({ ...prev, [key]: value }));
+    try {
+      window.parent.postMessage({ type: "__edit_mode_set_keys", edits: { [key]: value } }, "*");
+    } catch (e) {}
+  };
+  const setTheme = (v) => setTweak("theme", v);
+  const setLang  = (v) => setTweak("lang", v);
+  const setDesign = (v) => setTweak("design", v);
+
+  // Host protocol: register the listener BEFORE announcing availability so the
+  // activate message can't race past us.
+  useEffect(() => {
+    const onMsg = (e) => {
+      const data = e.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "__activate_edit_mode") setTweaksOpen(true);
+      if (data.type === "__deactivate_edit_mode") setTweaksOpen(false);
+    };
+    window.addEventListener("message", onMsg);
+    try { window.parent.postMessage({ type: "__edit_mode_available" }, "*"); } catch (e) {}
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  // Pick the renderer. Both components share the (theme, lang, setTheme, setLang) contract.
+  const designs = {
+    navy: window.PortfolioNavy,
+    terminal: window.PortfolioTerminal,
+  };
+  const Design = designs[tweaks.design] || designs.navy;
+
+  return (
+    <>
+      <Design
+        theme={tweaks.theme}
+        lang={tweaks.lang}
+        setTheme={setTheme}
+        setLang={setLang}
+      />
+
+      {/* Design-switch quick toggle. Always visible (independent of Tweaks panel state)
+          so the two designs feel like first-class peers, not a hidden setting. */}
+      <DesignSwitcher
+        value={tweaks.design}
+        onChange={setDesign}
+        onOpenTweaks={() => setTweaksOpen(true)}
+      />
+
+      {tweaksOpen && (
+        <TweaksPanel
+          tweaks={tweaks}
+          setTweak={setTweak}
+          onClose={() => {
+            setTweaksOpen(false);
+            try { window.parent.postMessage({ type: "__edit_mode_dismissed" }, "*"); } catch (e) {}
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ───── Always-on design switcher (bottom-left)
+// Tiny pill — a recruiter who lands on the page can see "you can flip to a
+// terminal view" without needing to know about the Tweaks toggle.
+function DesignSwitcher({ value, onChange, onOpenTweaks }) {
+  return (
+    <div style={{
+      position: "fixed", left: 20, bottom: 20, zIndex: 999,
+      display: "flex", alignItems: "center", gap: 6,
+      padding: 4,
+      background: "rgba(255,255,255,0.94)",
+      backdropFilter: "blur(10px)",
+      borderRadius: 999,
+      boxShadow: "0 10px 30px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)",
+      fontFamily: '"Inter", system-ui, sans-serif',
+    }}>
+      {[
+        { id: "navy", label: "Minimal", icon: "▦" },
+        { id: "terminal", label: "Terminal", icon: "$_" },
+      ].map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button key={opt.id} onClick={() => onChange(opt.id)} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 13px", borderRadius: 999,
+            border: 0,
+            background: active ? "#1a1f2c" : "transparent",
+            color: active ? "#fff" : "#1a1f2c",
+            cursor: "pointer", fontFamily: "inherit",
+            fontSize: 12.5, fontWeight: 600, letterSpacing: "0.01em",
+            transition: "background .15s, color .15s",
+          }}>
+            <span style={{
+              fontFamily: opt.id === "terminal"
+                ? '"JetBrains Mono", ui-monospace, monospace'
+                : "inherit",
+              fontSize: opt.id === "terminal" ? 11 : 12,
+              opacity: active ? 1 : 0.6,
+            }}>{opt.icon}</span>
+            {opt.label}
+          </button>
+        );
+      })}
+      <span style={{ width: 1, height: 18, background: "rgba(0,0,0,0.1)", margin: "0 2px" }} />
+      <button onClick={onOpenTweaks} title="Open tweaks" style={{
+        width: 30, height: 30, borderRadius: "50%",
+        border: 0, background: "transparent", color: "#1a1f2c",
+        cursor: "pointer", fontSize: 14, fontFamily: "inherit",
+      }}>⚙</button>
+    </div>
+  );
+}
+
+// ───── Floating tweaks panel
+function TweaksPanel({ tweaks, setTweak, onClose }) {
+  const designSwatches = [
+    { id: "navy", title: "Navy Minimal", desc: "Clean sans · navy accent · code snippets", preview: <NavyPreview /> },
+    { id: "terminal", title: "Terminal Dev", desc: "Monospace shell · ASCII · ANSI palette", preview: <TerminalPreview /> },
+  ];
+
+  return (
+    <div style={{
+      position: "fixed", right: 20, bottom: 20, zIndex: 9999,
+      width: 320, background: "#fff",
+      borderRadius: 14,
+      boxShadow: "0 24px 60px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)",
+      fontFamily: '"Inter", system-ui, sans-serif', color: "#1a1f2c",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "14px 16px", display: "flex", alignItems: "center",
+        borderBottom: "1px solid rgba(0,0,0,0.08)",
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Tweaks</div>
+        <div style={{ flex: 1 }} />
+        <button onClick={onClose} style={{
+          width: 24, height: 24, border: 0, background: "transparent",
+          cursor: "pointer", fontSize: 18, lineHeight: 1, color: "#6a7385",
+        }}>×</button>
+      </div>
+
+      <div style={{ padding: 16 }}>
+        <TweakLabel>Design</TweakLabel>
+        <div style={{ display: "grid", gap: 8, marginBottom: 18 }}>
+          {designSwatches.map((d) => {
+            const active = tweaks.design === d.id;
+            return (
+              <button key={d.id} onClick={() => setTweak("design", d.id)} style={{
+                display: "grid", gridTemplateColumns: "auto 1fr", gap: 12,
+                alignItems: "center", textAlign: "left",
+                padding: 10,
+                borderRadius: 10,
+                border: active ? "2px solid #1a1f2c" : "1px solid rgba(0,0,0,0.1)",
+                background: active ? "rgba(26,31,44,0.03)" : "#fff",
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+                <div style={{
+                  width: 56, height: 40, borderRadius: 5, overflow: "hidden",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                }}>{d.preview}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{d.title}</div>
+                  <div style={{ fontSize: 11, color: "#6a7385", marginTop: 2, lineHeight: 1.4 }}>{d.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <TweakLabel>Color theme</TweakLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 18 }}>
+          {[
+            { id: "light", bg: "#f7f6f3", ink: "#1a1f2c" },
+            { id: "dark", bg: "#0d1117", ink: "#e6edf3" },
+            { id: "navy", bg: "#1a2c4a", ink: "#f3ecd9" },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setTweak("theme", t.id)} style={{
+              padding: "10px 8px",
+              borderRadius: 8,
+              border: tweaks.theme === t.id ? "2px solid #1a1f2c" : "1px solid rgba(0,0,0,0.1)",
+              background: t.bg, color: t.ink,
+              cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+              textTransform: "capitalize",
+            }}>{t.id}</button>
+          ))}
+        </div>
+
+        <TweakLabel>Language</TweakLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          {[
+            { id: "en", label: "English" },
+            { id: "es", label: "Español" },
+          ].map((l) => (
+            <button key={l.id} onClick={() => setTweak("lang", l.id)} style={{
+              padding: "10px",
+              borderRadius: 8,
+              border: tweaks.lang === l.id ? "2px solid #1a1f2c" : "1px solid rgba(0,0,0,0.1)",
+              background: tweaks.lang === l.id ? "#1a1f2c" : "#fff",
+              color: tweaks.lang === l.id ? "#fff" : "#1a1f2c",
+              cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 500,
+            }}>{l.label}</button>
+          ))}
+        </div>
+
+        <div style={{
+          marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.06)",
+          fontSize: 11, color: "#6a7385", lineHeight: 1.5,
+        }}>
+          All settings persist on reload.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TweakLabel({ children }) {
+  return (
+    <div style={{
+      fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase",
+      color: "#6a7385", fontWeight: 600, marginBottom: 8,
+    }}>{children}</div>
+  );
+}
+
+// Tiny preview blocks for the design picker. Inline SVG keeps them crisp.
+function NavyPreview() {
+  return (
+    <svg viewBox="0 0 56 40" width="56" height="40">
+      <rect width="56" height="40" fill="#f7f6f3" />
+      <rect x="0" y="0" width="56" height="7" fill="#fff" />
+      <rect x="3" y="2.5" width="6" height="2" rx="1" fill="#2B4C7E" />
+      <rect x="44" y="2.5" width="9" height="2" rx="1" fill="#e0e2e8" />
+      <rect x="4" y="11" width="22" height="3" rx="0.5" fill="#1a1f2c" />
+      <rect x="4" y="15.5" width="14" height="1.6" rx="0.5" fill="#9aa1b3" />
+      <rect x="4" y="22" width="48" height="14" rx="2" fill="#fff" stroke="#dde0e6" />
+      <rect x="7" y="25" width="11" height="2" rx="0.5" fill="#2B4C7E" />
+      <rect x="7" y="28.5" width="14" height="1.4" rx="0.4" fill="#9aa1b3" />
+      <rect x="32" y="25" width="17" height="8" rx="1" fill="#0f1422" />
+    </svg>
+  );
+}
+function TerminalPreview() {
+  return (
+    <svg viewBox="0 0 56 40" width="56" height="40">
+      <rect width="56" height="40" fill="#0b0e0a" />
+      <rect width="56" height="6" fill="#0f1410" />
+      <circle cx="4" cy="3" r="1" fill="#ff5f57" />
+      <circle cx="8" cy="3" r="1" fill="#febc2e" />
+      <circle cx="12" cy="3" r="1" fill="#28c840" />
+      <text x="3" y="14" fill="#7cf28a" fontFamily="monospace" fontSize="3.6" fontWeight="700">$</text>
+      <rect x="7" y="11" width="22" height="2" fill="#cfe9c4" />
+      <rect x="3" y="17" width="40" height="1.4" fill="#5d7c54" />
+      <rect x="3" y="20.5" width="32" height="1.4" fill="#5d7c54" />
+      <rect x="3" y="25" width="50" height="12" fill="#0f1410" stroke="#1d3320" />
+      <rect x="5" y="27.5" width="6" height="1.6" fill="#f0c14b" />
+      <rect x="5" y="31" width="20" height="1.4" fill="#cfe9c4" />
+      <rect x="5" y="33.6" width="14" height="1.4" fill="#cfe9c4" />
+    </svg>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+</body>
+</html>

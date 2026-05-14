@@ -69,7 +69,6 @@ Requires Node 18.17+.
 │   ├── content.ts               bilingual content (identity, projects, …)
 │   ├── syntax.tsx               (unused) syntax tinter — kept for future
 │   └── useViewport.ts           breakpoint hook (mobile / tablet / desktop)
-├── _design-ref/                 original handoff bundle from claude.ai/design
 ├── next.config.mjs              output: "export"
 └── package.json
 ```
@@ -86,7 +85,3 @@ This site is configured for **static export** (`output: "export"` in [`next.conf
 
 - **Vercel** — auto-detected. Push to `main` → live in ~60s. No environment variables required.
 - **GitHub Pages / Netlify / S3 / Cloudflare Pages** — drop `out/` onto any static host.
-
-## Credits
-
-Designed with [Claude Design](https://claude.ai/design) (claude.ai), implemented and refined by Lucas with Claude Code. The original design handoff bundle is preserved under [`_design-ref/`](_design-ref/) for reference.

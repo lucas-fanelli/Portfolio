@@ -20,6 +20,7 @@ const jetbrains = JetBrains_Mono({
 const description = strings.hero.intro.en;
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://portfolio-lucasfanelli.com"),
   title: `${identity.name} · Portfolio`,
   description,
   authors: [{ name: identity.name }],

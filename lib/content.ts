@@ -103,14 +103,14 @@ export type Strings = {
 export const identity: Identity = {
   name: "Lucas Ariel Fanelli Sánchez",
   initials: "LF",
-  handle: "TheReaperGuy",
+  handle: "lucas-fanelli",
   location: "Vélez-Málaga, España",
   email: "lucasarielfanelli@hotmail.com",
   phone: "+34 623 299 094",
-  linkedin: "linkedin.com/in/lucas-fanelli-sánchez",
-  linkedinUrl: "https://www.linkedin.com/in/lucas-fanelli-s%C3%A1nchez-264a14398/",
-  github: "github.com/TheReaperGuy",
-  githubUrl: "https://github.com/TheReaperGuy",
+  linkedin: "linkedin.com/in/lucasarielfanelli",
+  linkedinUrl: "https://www.linkedin.com/in/lucasarielfanelli/",
+  github: "github.com/lucas-fanelli",
+  githubUrl: "https://github.com/lucas-fanelli",
 };
 
 export const strings: Strings = {

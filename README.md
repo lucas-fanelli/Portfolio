@@ -1,6 +1,6 @@
 # Portfolio · Lucas Fanelli Sánchez
 
-Personal portfolio for [Lucas Ariel Fanelli Sánchez](https://github.com/TheReaperGuy) — Computer Science + Mathematics undergraduate at the University of Málaga.
+Personal portfolio for [Lucas Ariel Fanelli Sánchez](https://github.com/lucas-fanelli) — Computer Science + Mathematics undergraduate at the University of Málaga.
 
 Built as a static-exported Next.js app so it can be deployed anywhere (Vercel, GitHub Pages, Netlify, S3, …) without a server.
 
@@ -31,7 +31,7 @@ Built as a static-exported Next.js app so it can be deployed anywhere (Vercel, G
 ## Local development
 
 ```bash
-git clone https://github.com/TheReaperGuy/Portfolio.git
+git clone https://github.com/lucas-fanelli/Portfolio.git
 cd Portfolio
 npm install
 npm run dev

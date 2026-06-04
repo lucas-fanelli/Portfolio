@@ -216,8 +216,8 @@ export const projects: Project[] = [
       en: "First-person psychological horror",
     },
     summary: {
-      es: "El protagonista se queda sin pastillas y, durante episodios disociativos, comete actos violentos sin ser consciente. El jugador es el perpetrador sin saberlo. Sin jump scares, estética VHS/lo-fi.",
-      en: "The protagonist runs out of medication and, during dissociative episodes, commits violent acts without realizing. The player is the unwitting perpetrator. No jump scares, VHS/lo-fi aesthetic.",
+      es: "Una noche, un apartamento, sin combate ni jump scares: la tensión se construye solo con la ambientación. Diseñé los sistemas que la generan: un motor de eventos de horror dirigido por datos, un modelo de miedo que modula luz, audio y efectos en tiempo real, y un deterioro visual progresivo con estética VHS/lo-fi.",
+      en: "One night, one apartment, no combat and no jump scares — dread is built entirely from atmosphere. I designed the systems behind it: a data-driven horror-event engine, a fear model that modulates lighting, audio and visuals in real time, and progressive VHS/lo-fi decay.",
     },
     role: { es: "Arquitecto · diseño narrativo · sistemas", en: "Architect · narrative design · systems" },
     stack: ["C#", "Unity 6 (URP)", "ElevenLabs"],

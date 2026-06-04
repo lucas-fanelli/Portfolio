@@ -40,11 +40,17 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     alternateLocale: "es_ES",
+    // Static card at /public/og.png (served as image/png via its extension).
+    // Design source + regen recipe: scripts/og-image.tsx.
+    images: [
+      { url: "/og.png", width: 1200, height: 630, alt: `${identity.name} · Portfolio` },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: `${identity.name} · Portfolio`,
     description,
+    images: ["/og.png"],
   },
 };
 

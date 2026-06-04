@@ -1,11 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "npm ci --no-audit --no-fund",
-  "headers": [
-    {
-      "source": "/opengraph-image",
-      "headers": [{ "key": "Content-Type", "value": "image/png" }]
-    }
-  ]
+  "installCommand": "npm ci --no-audit --no-fund"
 }

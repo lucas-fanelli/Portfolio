@@ -1,9 +1,23 @@
+/*
+ * OG image generator — DESIGN SOURCE for /public/og.png (1200x630).
+ *
+ * This file is NOT wired into the app (it lived at app/opengraph-image.tsx as a
+ * Next.js metadata route, but output:export emits that route as an extensionless
+ * file that Vercel serves with the wrong Content-Type). We instead ship a static
+ * /public/og.png, which Vercel serves as image/png via its extension.
+ *
+ * To regenerate /public/og.png after changing the card (or the content it reads):
+ *   1. cp scripts/og-image.tsx app/opengraph-image.tsx
+ *   2. npm run build
+ *   3. cp out/opengraph-image public/og.png
+ *   4. rm app/opengraph-image.tsx
+ *   5. commit the updated public/og.png
+ *
+ * Excluded from tsconfig so it isn't type-checked / bundled as part of the app.
+ */
 import { ImageResponse } from "next/og";
 import { identity, projects, strings } from "@/lib/content";
 
-// Static metadata for the route — Next.js generates the PNG at build time and
-// auto-injects the og:image / twitter:image tags. `force-static` is required
-// so the route is prerendered to a file under output:export (no server route).
 export const dynamic = "force-static";
 export const alt = `${identity.name} · Portfolio`;
 export const size = { width: 1200, height: 630 };
@@ -27,7 +41,6 @@ export default function OpengraphImage() {
           padding: 80,
         }}
       >
-        {/* Top row: monogram + portfolio label + availability pill */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <div
             style={{
@@ -61,7 +74,6 @@ export default function OpengraphImage() {
           </div>
         </div>
 
-        {/* Middle: name + role + kicker */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
@@ -78,7 +90,6 @@ export default function OpengraphImage() {
           <div style={{ color: "#8b95a7", fontSize: 28, marginTop: 12 }}>{kicker}</div>
         </div>
 
-        {/* Bottom: project names */}
         <div style={{ display: "flex", alignItems: "center" }}>
           {projects.map((p, i) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center" }}>

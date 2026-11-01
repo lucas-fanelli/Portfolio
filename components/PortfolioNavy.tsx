@@ -2,6 +2,8 @@
 
 import React from "react";
 import {
+  academics,
+  diagramColumns,
   identity,
   pick,
   projects,
@@ -517,6 +519,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
                   border: `1px solid ${c.line}`,
                   display: "flex",
                   flexDirection: "column",
+                  containerType: "inline-size",
                 }}
               >
                 <div
@@ -539,7 +542,6 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
                   style={{
                     flex: 1,
                     padding: isMobile ? "16px 12px" : "28px 20px",
-                    overflowX: "auto",
                     textAlign: "center",
                     display: "flex",
                     alignItems: "center",
@@ -551,7 +553,8 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
                       margin: 0,
                       display: "inline-block",
                       textAlign: "left",
-                      fontSize: "clamp(9.5px, calc(7px + 0.45vw), 15px)",
+                      // Sized to the code card (container units), so the widest line always fits.
+                      fontSize: `clamp(5px, calc((100cqw - ${isMobile ? 24 : 40}px) / (${diagramColumns(proj.diagram)} * 0.61)), 15px)`,
                       lineHeight: 1.6,
                       color: "rgba(255,255,255,0.78)",
                       whiteSpace: "pre",
@@ -599,11 +602,11 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
               <div style={{ display: "flex", gap: 32, fontSize: 13 }}>
                 <div>
                   <span style={metaDt(c)}>{t(strings.education.gpa)}</span>{" "}
-                  <strong style={{ color: c.accent, fontSize: 17 }}>8,7</strong>
+                  <strong style={{ color: c.accent, fontSize: 17 }}>{academics.gpa}</strong>
                 </div>
                 <div>
                   <span style={metaDt(c)}>{t(strings.education.access)}</span>{" "}
-                  <strong style={{ color: c.accent, fontSize: 17 }}>13,400</strong>
+                  <strong style={{ color: c.accent, fontSize: 17 }}>{academics.access}</strong>
                 </div>
               </div>
               <div style={{ marginTop: 14, fontSize: 13, color: c.muted }}>

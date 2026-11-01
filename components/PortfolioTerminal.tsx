@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  diagramColumns,
   identity,
   pick,
   projects,
@@ -390,8 +391,8 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
                       background: c.bg,
                       borderRadius: 3,
                       border: `1px solid ${c.line}`,
-                      overflowX: "auto",
                       textAlign: "center",
+                      containerType: "inline-size",
                     }}
                   >
                     <pre
@@ -400,7 +401,8 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
                         display: "inline-block",
                         textAlign: "left",
                         color: c.accent3,
-                        fontSize: 10.5,
+                        // Sized to this box (container units) so the widest line always fits.
+                        fontSize: `clamp(5px, calc((100cqw - 36px) / (${diagramColumns(proj.diagram)} * 0.61)), 12px)`,
                         lineHeight: 1.55,
                         whiteSpace: "pre",
                       }}

@@ -1,6 +1,6 @@
 export type Lang = "en" | "es";
 export type Theme = "light" | "dark" | "navy";
-export type DesignId = "navy" | "terminal";
+export type DesignId = "navy" | "terminal" | "night";
 export type ProjectStatus = "live" | "active" | "beta";
 
 export type Localized<T = string> = { es: T; en: T };
@@ -20,7 +20,7 @@ export type Project = {
   quality: Localized<string[]>;
   diagram: string;
   snippet: {
-    lang: "csharp" | "typescript" | "kotlin";
+    lang: "csharp" | "typescript" | "kotlin" | "python";
     code: string;
   };
 };
@@ -89,6 +89,19 @@ export type Strings = {
     bachDates: Localized;
     access: Localized;
   };
+  night: {
+    kicker: Localized;
+    scrollCue: Localized;
+    code: Localized;
+    more: Localized;
+    less: Localized;
+    plateCredit: Localized;
+    hours: Record<
+      "dusk" | "remy" | "heladera" | "withdrawal" | "jarvis" | "sleepsync" | "dawn",
+      Localized
+    >;
+    fridge: { toBuy: Localized; items: Localized[] };
+  };
   methodology: Localized<string[]>;
   languages: LanguageEntry[];
   statusLabels: Record<ProjectStatus, Localized>;
@@ -126,8 +139,8 @@ export const strings: Strings = {
       en: "Computer Science + Mathematics undergraduate",
     },
     kicker: {
-      es: "Doble grado · UMA · 2.º año",
-      en: "Double degree · UMA · 2nd year",
+      es: "Doble grado · UMA · 3.er año",
+      en: "Double degree · UMA · 3rd year",
     },
     intro: {
       es: "Diseño y dirijo proyectos de software — videojuegos, apps móviles y web — usando IA como herramienta de apoyo, no como sustituto del criterio técnico. Me interesa la arquitectura limpia, los sistemas que sobreviven al refactor y aprender lo siguiente.",
@@ -139,8 +152,8 @@ export const strings: Strings = {
   sections: {
     work: { es: "Proyectos seleccionados", en: "Selected work" },
     workNote: {
-      es: "Tres proyectos activos. Yo defino la arquitectura; la IA acelera la implementación.",
-      en: "Three active projects. I own the architecture; AI accelerates implementation.",
+      es: "Proyectos en producción y en desarrollo. Yo defino la arquitectura; la IA acelera la implementación.",
+      en: "Live and in-progress projects. I own the architecture; AI accelerates implementation.",
     },
     about: { es: "Sobre mí", en: "About" },
     education: { es: "Formación", en: "Education" },
@@ -173,6 +186,36 @@ export const strings: Strings = {
     bachInst: { es: "IES María Zambrano · Torre del Mar", en: "IES María Zambrano · Torre del Mar" },
     bachDates: { es: "Finalizado 2024", en: "Completed 2024" },
     access: { es: "Nota de acceso PEvAU", en: "University entry score" },
+  },
+  night: {
+    kicker: { es: "Una noche en casa.", en: "One night at home." },
+    scrollCue: { es: "Baja despacio", en: "Scroll slowly" },
+    code: { es: "Ver código real", en: "View real code" },
+    more: { es: "Ver arquitectura y detalles", en: "Architecture and details" },
+    less: { es: "Ocultar detalles", en: "Hide details" },
+    plateCredit: {
+      es: "Ambientes generados con IA (Higgsfield). Los proyectos, el código y los diagramas son reales.",
+      en: "Ambient plates generated with AI (Higgsfield). Projects, code and diagrams are real.",
+    },
+    hours: {
+      dusk: { es: "anochece", en: "nightfall" },
+      remy: { es: "la cena", en: "dinner" },
+      heladera: { es: "el antojo", en: "the craving" },
+      sleepsync: { es: "dormirse", en: "falling asleep" },
+      withdrawal: { es: "la casa en silencio", en: "the house goes quiet" },
+      jarvis: { es: "la madrugada", en: "the small hours" },
+      dawn: { es: "amanece", en: "dawn" },
+    },
+    // Labels for the fridge scene's selection animation (an illustration of ticking items off the list).
+    fridge: {
+      toBuy: { es: "Faltan", en: "To buy" },
+      items: [
+        { es: "Leche", en: "Milk" },
+        { es: "Tomates", en: "Tomatoes" },
+        { es: "Queso", en: "Cheese" },
+        { es: "Lechuga", en: "Lettuce" },
+      ],
+    },
   },
   methodology: {
     es: ["Clean Architecture", "MVVM", "Event Bus", "Repository Pattern", "SOLID", "TDD", "E2E testing", "Ágil"],
@@ -216,8 +259,8 @@ export const projects: Project[] = [
       en: "First-person psychological horror",
     },
     summary: {
-      es: "Una noche, un apartamento, sin combate ni jump scares: la tensión se construye solo con la ambientación. Diseñé los sistemas que la generan: un motor de eventos de horror dirigido por datos, un modelo de miedo que modula luz, audio y efectos en tiempo real, y un deterioro visual progresivo con estética VHS/lo-fi.",
-      en: "One night, one apartment, no combat and no jump scares — dread is built entirely from atmosphere. I designed the systems behind it: a data-driven horror-event engine, a fear model that modulates lighting, audio and visuals in real time, and progressive VHS/lo-fi decay.",
+      es: "Una noche, un apartamento, sin combate: la tensión se construye desde la ambientación. Diseñé los sistemas que la generan: un motor de eventos de horror dirigido por datos, un modelo de miedo que modula luz, audio y efectos en tiempo real, y un deterioro visual progresivo con estética VHS/lo-fi.",
+      en: "One night, one apartment, no combat — dread is built from atmosphere. I designed the systems behind it: a data-driven horror-event engine, a fear model that modulates lighting, audio and visuals in real time, and progressive VHS/lo-fi decay.",
     },
     role: { es: "Arquitecto · diseño narrativo · sistemas", en: "Architect · narrative design · systems" },
     stack: ["C#", "Unity 6 (URP)", "ElevenLabs"],
@@ -466,6 +509,162 @@ export const projects: Project[] = [
 }`,
     },
   },
+  {
+    id: "heladera",
+    n: "04",
+    name: "Heladera",
+    tagline: {
+      es: "Lista de compras compartida, sin conexión y en tiempo real",
+      en: "Shared grocery list — offline-first and real-time",
+    },
+    summary: {
+      es: "PWA que una familia usa todos los días: uno anota el antojo, otro lo ve en el súper y lo tilda, con o sin señal. Listas privadas con invitaciones que vencen y sin backend propio: el acceso lo deciden las reglas de Firestore.",
+      en: "A PWA a family uses every day: one person jots down the craving, another ticks it off at the supermarket, with or without signal. Private lists with expiring invites and no backend of its own — Firestore security rules decide who gets in.",
+    },
+    role: { es: "Producto · arquitectura · circuito de deploy", en: "Product · architecture · deploy pipeline" },
+    stack: ["TypeScript", "React 19", "Vite", "Firebase", "Motion"],
+    platform: "heladera-ec2b4.web.app",
+    url: "https://heladera-ec2b4.web.app",
+    status: "live",
+    philosophy: {
+      es: [
+        "La UI solo conoce una URL y la interfaz Db",
+        "Mutaciones sin await: la UI nunca espera a la red",
+        "Seguridad en las reglas de Firestore, sin servidor propio",
+        "28 decisiones registradas (D1–D28), cada una con su porqué",
+      ],
+      en: [
+        "The UI only knows a URL and the Db interface",
+        "No-await mutations: the UI never waits on the network",
+        "Security lives in Firestore rules, no server of its own",
+        "28 recorded decisions (D1–D28), each with its rationale",
+      ],
+    },
+    quality: {
+      es: [
+        "Suite de contrato: los mismos tests contra el Db falso y Firestore",
+        "Reglas de seguridad probadas caso por caso en el emulador",
+        "Deploy con puertas deterministas y auditorías de agentes a ciegas",
+        "Bugs de Android diagnosticados midiendo en el teléfono (CDP sobre adb)",
+      ],
+      en: [
+        "Contract suite: the same tests against the fake Db and Firestore",
+        "Security rules tested case by case on the emulator",
+        "Deploys gated by deterministic checks and blind agent audits",
+        "Android bugs diagnosed by measuring on the phone (CDP over adb)",
+      ],
+    },
+    diagram: [
+      "  URL ─▶ app/router ─▶ useLista ─▶ PantallaLista · ui/",
+      "                          │ suscribir(listId) → Vista",
+      "                          ▼",
+      "         ┌─────────── db/types.ts ────────────┐",
+      "         │  interface Db · the only data door │",
+      "         │  no-await mutations · onError      │",
+      "         └──────┬─────────────────────┬───────┘",
+      "                ▼                     ▼",
+      "            fake.ts              firestore.ts",
+      "       memory · tests · demo   offline cache · realtime",
+      "                └─ contract suite ────┘     │",
+      "                                            ▼",
+      "  domain/ (pure): normalizar · dedupe   firestore.rules",
+      "  vista · mercados · sugerencias        who gets in",
+    ].join("\n"),
+    snippet: {
+      lang: "typescript",
+      code: `export interface Db {
+  /** Se suscribe a la vista de una lista. Llama a \`cb\` de inmediato (caché) y en cada cambio. */
+  suscribir(listId: string, cb: (vista: Vista) => void): () => void;
+  // ...
+  /** Devuelve el id del ítem nuevo de inmediato (id generado en el cliente). */
+  agregarItem(listId: string, texto: string, yo: Yo): string;
+  marcarComprado(listId: string, itemId: string, comprado: boolean, yo: Yo): void;
+  // ...
+  /** Crea una invitación que vence en 7 días y devuelve su código (va en el fragmento del link). */
+  invitar(listId: string): Promise<string>;
+  // ...
+  /** Errores de cualquier operación (permisos, validación, red). La UI los muestra como toast. */
+  onError(cb: (e: DbError) => void): () => void;
+}`,
+    },
+  },
+  {
+    id: "jarvis",
+    n: "05",
+    name: "JARVIS",
+    tagline: {
+      es: "Asistente de voz local, en tiempo real",
+      en: "Real-time local voice assistant",
+    },
+    summary: {
+      es: "Asistente de voz que corre entero en la PC, sin nube: le hablás en español y responde en voz, en inglés. Un pipeline propio —detección de turno, STT, router, LLM local y TTS en streaming— donde cada milisegundo se mide y queda registrado.",
+      en: "A voice assistant that runs entirely on the PC, no cloud: you speak Spanish and it answers aloud in English. A hand-built pipeline — turn detection, STT, router, local LLM and streaming TTS — where every millisecond is measured and logged.",
+    },
+    role: { es: "Arquitectura · pipeline de voz · medición", en: "Architecture · voice pipeline · benchmarking" },
+    stack: ["Python 3.12", "asyncio", "Ollama · gemma4", "Parakeet STT", "ONNX Runtime"],
+    platform: "Windows · local",
+    status: "active",
+    philosophy: {
+      es: [
+        "Cada hito termina con algo usable y un número medido",
+        "El cerebro se eligió con un banco propio: 7 LLMs medidos en la GPU",
+        "Pipeline fino, sin frameworks pesados: cada milisegundo visible",
+        "Dueño de su propio Ollama: sin procesos huérfanos reteniendo VRAM",
+      ],
+      en: [
+        "Every milestone ends with something usable and a measured number",
+        "The brain was picked by benchmark: 7 local LLMs measured on the GPU",
+        "Thin pipeline, no heavy frameworks: every millisecond visible",
+        "Owns its Ollama child process: no orphans holding VRAM",
+      ],
+    },
+    quality: {
+      es: [
+        "Meta: < 800 ms del fin de tu frase al primer sonido (p50)",
+        "Comandos por fast-path: < 400 ms hasta la respuesta",
+        "Cada turno en logs/turns.jsonl con la latencia de cada etapa",
+        "Modo juego: el LLM pasa a CPU y libera la VRAM",
+      ],
+      en: [
+        "Target: < 800 ms from end of speech to first sound (p50)",
+        "Fast-path commands: < 400 ms to the reply",
+        "Every turn logged to logs/turns.jsonl with per-stage latency",
+        "Game mode: the LLM moves to CPU and frees the VRAM",
+      ],
+    },
+    diagram: [
+      "  mic ─▶ VAD/turn ─▶ STT ─▶ router ─┬─▶ fast-path (regex)",
+      "                    Parakeet        │     ─▶ action + canned reply",
+      "                                    │",
+      "                                    └─▶ LLM stream · Ollama gemma4",
+      "                                          ─▶ clause chunker",
+      "                                          ─▶ TTS stream ─▶ headphones",
+      "",
+      "  every stage ─▶ logs/turns.jsonl + live latency line",
+    ].join("\n"),
+    snippet: {
+      lang: "python",
+      code: `class ClauseChunker:
+    """Corta el texto del LLM en frases cortas para que el TTS empiece cuanto antes.
+
+    La primera cláusula se corta en la primera coma (así empieza a sonar mientras se
+    genera el resto); las demás en fin de oración, o en coma/punto y coma con 8+
+    palabras; tope duro de 25 palabras. Nunca se corta justo antes de "sir"/"señor":
+    sintetizado suelto sonaba "Yes........ sir" / "señooooor".
+    """
+
+    def feed(self, piece: str) -> list[str]:
+        self.buf += piece
+        # ...
+        out = []
+        while (cut := self._find_cut()) is not None:
+            clause, self.buf = self.buf[:cut].strip(), self.buf[cut:]
+            if clause:
+                out.append(self._clean(clause))
+                self.first = False
+        return out`,
+    },
+  },
 ];
 
 export const skills: Skill[] = [
@@ -478,6 +677,13 @@ export const skills: Skill[] = [
 ];
 
 export const tools: string[] = ["Unity", "Git", "VS Code", "IntelliJ"];
+
+export const academics = { gpa: "8,7", access: "13,400" } as const;
+
+/** Widest line of an ASCII diagram, in characters. Designs size the font so this many columns fit. */
+export function diagramColumns(diagram: string): number {
+  return Math.max(...diagram.split("\n").map((line) => line.length));
+}
 
 export function pick<T>(value: Localized<T> | T, lang: Lang): T {
   if (value && typeof value === "object" && "es" in (value as object) && "en" in (value as object)) {

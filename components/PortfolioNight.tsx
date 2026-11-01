@@ -95,15 +95,26 @@ export default function PortfolioNight({ lang, setLang }: Props) {
   const intro = (
     <header id="top" className={s.hero}>
       <div className={s.heroInner}>
-        <Image
-          className={`${s.portrait} ${s.enter}`}
-          src="/night/lucas.webp"
-          alt={identity.name}
-          width={640}
-          height={800}
-          sizes="(min-width: 1024px) 168px, 104px"
-          priority
-        />
+        <div className={`${s.portraits} ${s.enter}`}>
+          <Image
+            className={s.portrait}
+            src="/night/lucas.webp"
+            alt={identity.name}
+            width={640}
+            height={800}
+            sizes="(min-width: 1024px) 150px, 96px"
+            priority
+          />
+          <Image
+            className={s.portrait}
+            src="/night/lucas-2.webp"
+            alt={identity.name}
+            width={301}
+            height={376}
+            sizes="(min-width: 1024px) 150px, 96px"
+            priority
+          />
+        </div>
         <p className={`${s.hour} ${s.enter}`} style={{ animationDelay: "0.05s" }}>
           20:00 — {t(strings.night.hours.dusk)}
         </p>

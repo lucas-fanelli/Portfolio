@@ -279,8 +279,12 @@
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100svh - 84px - 76px);
     padding: 18px 18px 20px;
+  }
+
+  /* Only an opened card (details shown) scrolls on its own, and it hands the gesture back to the
+     page at its ends — a closed card must never swallow the page scroll. */
+  .card:has([data-open="true"]) {
     overflow-y: auto;
-    overscroll-behavior: contain;
   }
 }
 

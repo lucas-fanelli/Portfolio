@@ -253,12 +253,17 @@
   max-width: 980px;
 }
 
+.portraits {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
 .portrait {
   display: block;
-  width: clamp(104px, 12vw, 168px);
+  width: clamp(96px, 10.5vw, 150px);
   height: auto;
   aspect-ratio: 4 / 5;
-  margin-bottom: 26px;
   object-fit: cover;
   border-radius: 14px;
   filter: saturate(0.92) contrast(1.04);

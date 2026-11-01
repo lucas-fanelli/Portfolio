@@ -1,0 +1,549 @@
+/*
+ * The house: one sticky stage with stacked plates (wide shot + close-ups) that a
+ * scroll-driven camera zooms and pans, while project cards scroll past on the left.
+ * Plate transforms and opacities are written by NightHouse.tsx every frame.
+ */
+
+.house {
+  position: relative;
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: #0b0c0e;
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+}
+
+.layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, calc(100cqh * var(--ratio)));
+  aspect-ratio: var(--ratio);
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.close,
+.later {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.close[data-on="0"] * {
+  animation-play-state: paused !important;
+}
+
+.dark {
+  position: absolute;
+  inset: 0;
+  background: #04060b;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* First light through the bedroom window, just before the dawn section. */
+.warm {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 52% 22%,
+    rgba(255, 196, 150, 0.6) 0%,
+    rgba(255, 170, 120, 0.18) 45%,
+    rgba(255, 170, 120, 0) 75%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- the monitor's screen (DOM over the desk plate) ---------- */
+
+.screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #020407;
+  transform-origin: 0 0;
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+
+.reel {
+  position: absolute;
+  inset: 0;
+  opacity: var(--game, 0);
+  filter: contrast(1.08) saturate(0.82);
+}
+
+.reelShot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  animation: reel 12s linear infinite;
+}
+
+/* Five captures, 2.4 s each, with a VHS tear on the way in. */
+@keyframes reel {
+  0% {
+    opacity: 0;
+    transform: translateX(-3%) skewX(6deg);
+    filter: brightness(1.9) saturate(0.2);
+  }
+  1.5% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  19% {
+    opacity: 1;
+  }
+  20.5%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px);
+  animation: roll 7s steps(1) infinite;
+}
+
+@keyframes roll {
+  0%,
+  88%,
+  100% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  92% {
+    opacity: 0.9;
+  }
+}
+
+.screen:not([data-mode="game"]) .reelShot,
+.screen:not([data-mode="game"]) .scanlines {
+  animation-play-state: paused;
+}
+
+.voice {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--voice, 0);
+  background: radial-gradient(circle at 50% 50%, rgba(40, 120, 170, 0.2), rgba(40, 120, 170, 0) 62%);
+}
+
+.screenGlass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.3) 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
+}
+
+/* As the house ends, the stage's bottom fades into the dawn section's opening colour (#070b17). */
+.endFade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 55%;
+  background: linear-gradient(180deg, rgba(7, 11, 23, 0) 0%, rgba(7, 11, 23, 0.85) 70%, #070b17 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Phones: the frame covers the top 64svh; fade its bottom edge into the stage. */
+  background: linear-gradient(
+    0deg,
+    #0b0c0e 0%,
+    #0b0c0e 37%,
+    rgba(11, 12, 14, 0.6) 48%,
+    rgba(11, 12, 14, 0) 64%
+  );
+}
+
+@media (min-width: 900px) {
+  .close {
+    /* Close-ups slide right to clear the cards; their left edge fades into the stage. */
+    mask-image: linear-gradient(to right, transparent 0%, #000 24%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 24%);
+  }
+
+  .scrim {
+    background:
+      linear-gradient(90deg, rgba(11, 12, 14, 0.9) 0%, rgba(11, 12, 14, 0.62) 30%, rgba(11, 12, 14, 0) 56%),
+      linear-gradient(0deg, rgba(11, 12, 14, 0.5) 0%, rgba(11, 12, 14, 0) 28%);
+  }
+}
+
+@media (max-width: 899px) {
+  .frame {
+    bottom: auto;
+    height: 64svh;
+  }
+}
+
+/* ---------- scroll track ---------- */
+
+.track {
+  position: relative;
+  z-index: 1;
+  margin-top: -100svh;
+}
+
+.segWork {
+  padding: 24vh 0 34vh;
+}
+
+.segProject {
+  padding: 82vh 0 96vh;
+}
+
+.segWalk {
+  height: 170vh;
+}
+
+@media (max-width: 899px) {
+  .segIntro > * {
+    padding-top: 48svh;
+  }
+
+  .segProject {
+    padding: 66svh 0 92svh;
+  }
+}
+
+.card {
+  position: relative;
+  width: min(540px, calc(100% - 2 * var(--gutter)));
+  margin-left: var(--gutter);
+  padding: clamp(22px, 2.6vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  color: var(--ink);
+}
+
+/* ---------- ambient light on the wide shot ---------- */
+
+.lamp {
+  position: absolute;
+  left: 25.5%;
+  top: 24%;
+  width: 26%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 120, 0.42) 0%, rgba(255, 196, 120, 0) 62%);
+  mix-blend-mode: screen;
+  animation: lamp 5s ease-in-out infinite;
+}
+
+@keyframes lamp {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ---------- stove: steam, sizzle, flame ---------- */
+
+.steam {
+  position: absolute;
+  left: 32%;
+  top: 14%;
+  width: 30%;
+  height: 50%;
+}
+
+.puff {
+  position: absolute;
+  left: 30%;
+  bottom: 0;
+  width: 24%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 246, 230, 0.75) 0%, rgba(255, 246, 230, 0.25) 40%, rgba(255, 246, 230, 0) 68%);
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: puff 4.4s cubic-bezier(0.3, 0.6, 0.4, 1) infinite;
+}
+
+@keyframes puff {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  60% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(var(--dx, 0%), -320%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+.sizzle {
+  position: absolute;
+  left: 30%;
+  top: 58%;
+  width: 34%;
+  height: 12%;
+}
+
+.spark {
+  position: absolute;
+  width: 1.4%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff6d8;
+  box-shadow:
+    0 0 4px 1px rgba(255, 230, 160, 0.95),
+    0 0 12px 3px rgba(255, 170, 80, 0.55);
+  opacity: 0;
+  animation: spark 0.9s ease-out infinite;
+}
+
+@keyframes spark {
+  0% {
+    transform: translateY(0) scale(0.4);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-260%) scale(1);
+    opacity: 0;
+  }
+}
+
+.flame {
+  position: absolute;
+  left: 33%;
+  top: 80%;
+  width: 30%;
+  height: 18%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 110, 40, 0.6) 0%, rgba(255, 110, 40, 0) 70%);
+  mix-blend-mode: screen;
+  animation: flame 1.4s ease-in-out infinite;
+}
+
+@keyframes flame {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  30% {
+    opacity: 0.55;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+
+/* ---------- fridge: virtual selection ---------- */
+
+.fridgeGlow {
+  position: absolute;
+  left: 34%;
+  top: 8%;
+  width: 30%;
+  height: 86%;
+  background: radial-gradient(ellipse at 50% 20%, rgba(210, 235, 255, 0.18), rgba(210, 235, 255, 0) 70%);
+  mix-blend-mode: screen;
+  animation: hum 6s ease-in-out infinite;
+}
+
+@keyframes hum {
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.sprite {
+  position: absolute;
+  background-image: url("/night/house-fridge.webp");
+  background-repeat: no-repeat;
+  border-radius: 6px;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.6s ease;
+}
+
+.sprite[data-selected="true"] {
+  transform: translateY(-5%) scale(1.12);
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55)) brightness(1.12);
+  z-index: 2;
+}
+
+.box {
+  position: absolute;
+  z-index: 3;
+  border: 1.5px solid #9ad3c4;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 4px rgba(154, 211, 196, 0.14),
+    0 0 24px rgba(154, 211, 196, 0.25);
+  opacity: 0;
+  transform: scale(1.25);
+  transition:
+    opacity 0.35s ease,
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+.box[data-on="true"] {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(10, 18, 20, 0.85);
+  color: #e6f4ef;
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.check {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #9ad3c4;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 1;
+  color: transparent;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.check[data-done="true"] {
+  background: #9ad3c4;
+  color: #0a1214;
+}
+
+.tick {
+  position: absolute;
+  z-index: 3;
+  width: 1.6%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #9ad3c4;
+  box-shadow: 0 0 0 3px rgba(154, 211, 196, 0.25);
+  translate: -50% -50%;
+  animation: pop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.4) both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+.counter {
+  position: absolute;
+  left: 47%;
+  top: 13%;
+  z-index: 3;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 18, 20, 0.85);
+  color: #e6f4ef;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.counter b {
+  display: inline-block;
+  min-width: 1.4ch;
+  color: #9ad3c4;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp,
+  .puff,
+  .spark,
+  .flame,
+  .fridgeGlow,
+  .tick,
+  .scanlines {
+    animation: none;
+  }
+
+  /* No reel: the first capture stays on screen. */
+  .reelShot {
+    animation: none;
+  }
+
+  .reelShot:first-child {
+    opacity: 1;
+  }
+
+  .puff,
+  .spark {
+    display: none;
+  }
+
+  .sprite,
+  .box,
+  .check {
+    transition: none;
+  }
+}

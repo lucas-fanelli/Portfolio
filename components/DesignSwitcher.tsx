@@ -13,6 +13,7 @@ type Props = {
 const OPTIONS: { id: DesignId; label: string; icon: string }[] = [
   { id: "navy", label: "Minimal", icon: "▦" },
   { id: "terminal", label: "Terminal", icon: "$_" },
+  { id: "night", label: "Night", icon: "☾" },
 ];
 
 export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props) {
@@ -21,6 +22,7 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
   const btnRefs = useRef<Record<DesignId, HTMLButtonElement | null>>({
     navy: null,
     terminal: null,
+    night: null,
   });
   const [indicator, setIndicator] = useState<{ left: number; width: number }>({
     left: 0,

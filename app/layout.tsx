@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { identity, strings } from "@/lib/content";
 import "./globals.css";
 
@@ -10,11 +11,28 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+// Self-hosted JetBrains Mono (official v2.304, OFL — see app/fonts/OFL-JetBrainsMono.txt), subset to
+// Latin + punctuation + arrows + box drawing + geometric shapes. Google's "latin" subset lacks the
+// box-drawing glyphs, so the ASCII diagrams fell back to a proportional font and lost alignment.
+const jetbrains = localFont({
+  src: [
+    { path: "./fonts/JetBrainsMono-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/JetBrainsMono-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/JetBrainsMono-Bold.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-jetbrains",
   display: "swap",
-  weight: ["400", "500", "700"],
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+  adjustFontFallback: false,
+});
+
+// Display serif for the "One Night" design.
+const instrument = Instrument_Serif({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-instrument",
+  display: "swap",
+  weight: "400",
+  style: ["normal", "italic"],
 });
 
 const description = strings.hero.intro.en;
@@ -65,7 +83,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable} ${instrument.variable}`}>
       <body>{children}</body>
     </html>
   );

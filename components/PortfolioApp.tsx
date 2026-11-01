@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import DesignSwitcher from "./DesignSwitcher";
 import PortfolioNavy from "./PortfolioNavy";
+import PortfolioNight from "./PortfolioNight";
 import PortfolioTerminal from "./PortfolioTerminal";
 import TweaksPanel, { type Tweaks } from "./TweaksPanel";
 import type { DesignId, Lang, Theme } from "@/lib/content";
@@ -15,7 +16,13 @@ const DEFAULT_TWEAKS: Tweaks = {
   lang: "en",
 };
 
-const VALID_DESIGN: ReadonlySet<DesignId> = new Set<DesignId>(["navy", "terminal"]);
+const VALID_DESIGN: ReadonlySet<DesignId> = new Set<DesignId>(["navy", "terminal", "night"]);
+
+const DESIGNS = {
+  navy: PortfolioNavy,
+  terminal: PortfolioTerminal,
+  night: PortfolioNight,
+} satisfies Record<DesignId, unknown>;
 const VALID_THEME: ReadonlySet<Theme> = new Set<Theme>(["light", "dark", "navy"]);
 const VALID_LANG: ReadonlySet<Lang> = new Set<Lang>(["en", "es"]);
 
@@ -75,7 +82,7 @@ export default function PortfolioApp() {
   const setLang = useCallback((v: Lang) => setTweak("lang", v), [setTweak]);
   const setDesign = useCallback((v: DesignId) => setTweak("design", v), [setTweak]);
 
-  const Design = tweaks.design === "terminal" ? PortfolioTerminal : PortfolioNavy;
+  const Design = DESIGNS[tweaks.design];
 
   return (
     <>

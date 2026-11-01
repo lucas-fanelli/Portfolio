@@ -72,6 +72,22 @@ function TerminalPreview() {
   );
 }
 
+function NightPreview() {
+  return (
+    <svg viewBox="0 0 56 40" width="56" height="40">
+      <rect width="56" height="40" fill="#0b0c0e" />
+      <circle cx="46" cy="10" r="9" fill="#e8b86a" opacity="0.22" />
+      <circle cx="46" cy="10" r="3.5" fill="#f3d39a" opacity="0.5" />
+      <rect x="4" y="8" width="8" height="1.2" fill="#e8b86a" />
+      <rect x="4" y="13" width="26" height="4.5" rx="0.5" fill="#efe7da" />
+      <rect x="4" y="19.5" width="20" height="4.5" rx="0.5" fill="#d8c7ab" opacity="0.7" />
+      <rect x="4" y="31" width="15" height="6" rx="1" fill="#3a2414" />
+      <rect x="20.5" y="31" width="15" height="6" rx="1" fill="#141c3a" />
+      <rect x="37" y="31" width="15" height="6" rx="1" fill="#16251b" />
+    </svg>
+  );
+}
+
 const DESIGN_SWATCHES: {
   id: DesignId;
   title: string;
@@ -80,6 +96,7 @@ const DESIGN_SWATCHES: {
 }[] = [
   { id: "navy", title: "Navy Minimal", desc: "Clean sans · navy accent · code snippets", preview: <NavyPreview /> },
   { id: "terminal", title: "Terminal Dev", desc: "Monospace shell · ASCII · ANSI palette", preview: <TerminalPreview /> },
+  { id: "night", title: "One Night", desc: "Cinematic · one scene per project · own palette", preview: <NightPreview /> },
 ];
 
 const THEMES: { id: Theme; bg: string; ink: string }[] = [
@@ -235,6 +252,11 @@ export default function TweaksPanel({ tweaks, setTweak, onClose }: Props) {
         </div>
 
         <TweakLabel>Color theme</TweakLabel>
+        {tweaks.design === "night" && (
+          <div style={{ fontSize: 11, color: "#6a7385", margin: "-2px 0 8px", lineHeight: 1.4 }}>
+            One Night uses its own palette per scene; this applies to the other designs.
+          </div>
+        )}
         <div
           style={{
             display: "grid",

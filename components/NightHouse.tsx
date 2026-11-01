@@ -11,7 +11,7 @@ type Pt = { x: number; y: number };
 /** Camera framing: put image point `f` (fractions of the plate) at frame point `t`, scaled by `s`. */
 type Shot = { f: Pt; t: Pt; s: number };
 type ProjectScene = "remy" | "heladera" | "withdrawal" | "jarvis" | "sleepsync";
-type Scene = "intro" | "work" | "walk" | ProjectScene;
+type Scene = "intro" | "work" | "walk" | ProjectScene | "dawn";
 /**
  * cover: never show the stage behind the plate · allowLeft: may slide right (desktop close-ups,
  * the gap sits under the cards) · allowBottom: may slide up (phone close-ups, the gap sits under
@@ -42,8 +42,10 @@ const shot = (fx: number, fy: number, tx: number, ty: number, s: number): Shot =
 });
 
 // Points measured on the plates. Kitchen: pan (0.17, 0.60), fridge (0.555, 0.58), hallway door
-// (0.385, 0.50). Close-ups: pan (0.47, 0.62), fridge interior (0.48, 0.60). Desk: monitor centre
-// (0.497, 0.51). On desktop the subject sits right of centre so the cards on the left never cover it.
+// (0.385, 0.50). Close-ups: pan (0.47, 0.60), fridge interior (0.615, 0.76; the open fridge
+// fills only the lower right of its plate, so its framings zoom in further). Desk: monitor centre
+// (0.492, 0.542). Bedroom: window and bed (0.6, 0.5). On desktop the subject sits right of centre so
+// the cards on the left never cover it.
 const DESKTOP: Shots = {
   hero: shot(0.45, 0.55, 0.62, 0.5, 1.12),
   base: shot(0.42, 0.55, 0.58, 0.5, 1.08),
@@ -51,12 +53,13 @@ const DESKTOP: Shots = {
   stoveIn: shot(0.47, 0.62, 0.68, 0.5, 1.3),
   stoveHold: shot(0.47, 0.62, 0.68, 0.5, 1.06),
   fridge: shot(0.555, 0.58, 0.68, 0.5, 2.4),
-  fridgeIn: shot(0.48, 0.6, 0.68, 0.5, 1.3),
-  fridgeHold: shot(0.48, 0.6, 0.68, 0.5, 1.06),
+  // Aimed a little low so the milk's label clears the nav.
+  fridgeIn: shot(0.615, 0.76, 0.68, 0.55, 1.7),
+  fridgeHold: shot(0.615, 0.76, 0.68, 0.55, 1.45),
   door: shot(0.385, 0.5, 0.5, 0.5, 4.2),
-  deskBase: shot(0.5, 0.52, 0.6, 0.5, 1.08),
-  monitor: shot(0.497, 0.51, 0.7, 0.5, 2.4),
-  bed: shot(0.45, 0.55, 0.62, 0.5, 1.1),
+  deskBase: shot(0.5, 0.55, 0.6, 0.5, 1.08),
+  monitor: shot(0.492, 0.542, 0.7, 0.5, 2.6),
+  bed: shot(0.6, 0.5, 0.62, 0.5, 1.1),
 };
 
 // On phones the scene lives in the top 64svh and the cards scroll below it. The nav covers the
@@ -68,19 +71,42 @@ const MOBILE: Shots = {
   hero: shot(0.45, 0.55, 0.5, 0.5, 1),
   base: shot(0.42, 0.55, 0.5, 0.5, 1),
   stove: shot(0.17, 0.6, 0.5, 0.45, 2.4),
-  stoveIn: shot(0.47, 0.56, 0.5, 0.45, 1.45),
-  stoveHold: shot(0.47, 0.56, 0.5, 0.45, 1.3),
+  stoveIn: shot(0.47, 0.6, 0.5, 0.45, 1.15),
+  stoveHold: shot(0.47, 0.6, 0.5, 0.45, 1),
   fridge: shot(0.555, 0.56, 0.5, 0.47, 2.1),
-  fridgeIn: shot(0.46, 0.66, 0.5, 0.47, 1.2),
-  fridgeHold: shot(0.46, 0.66, 0.5, 0.47, 1),
+  // The four items span 37.5% of the plate's height; at 1.36× they fit between the nav and the
+  // parked card (the clear band is ~12–67% of the frame), aimed at its middle.
+  fridgeIn: shot(0.625, 0.76, 0.5, 0.405, 1.56),
+  fridgeHold: shot(0.625, 0.76, 0.5, 0.405, 1.36),
   door: shot(0.385, 0.5, 0.5, 0.5, 3.5),
-  deskBase: shot(0.5, 0.5, 0.5, 0.47, 1.1),
-  monitor: shot(0.497, 0.51, 0.5, 0.47, 1.75),
-  bed: shot(0.4, 0.6, 0.5, 0.5, 1),
+  deskBase: shot(0.49, 0.55, 0.5, 0.47, 1.1),
+  monitor: shot(0.492, 0.542, 0.5, 0.47, 1.9),
+  bed: shot(0.62, 0.5, 0.5, 0.5, 1),
 };
 
-/** The monitor's screen on the desk plate (fractions of the 2048×1152 image). */
-const SCREEN = { x: 0.3935, y: 0.4018, w: 0.207, h: 0.2178 };
+/** The monitor's screen on the desk plate (fractions of the image, so any resolution of it works). */
+const SCREEN = { x: 0.4195, y: 0.4713, w: 0.1442, h: 0.1407 };
+
+/**
+ * The camera moves through the house: one continuous Kling 3.0 Omni take per transition, scrubbed by
+ * scroll (forwards on the way in, backwards on the way out). The kitchen takes start from the wide
+ * kitchen plate alone (the walk is pinned to the desk frame at its end as well); the turn to the bed
+ * starts from the desk frame, and the dawn time-lapse from the bed frame, with the camera locked
+ * off. Each take's last frame is the plate it hands over to (stove, fridge, desk, bedroom, dawn), so
+ * the camera really travels through one house and the stills never jump. Interpolated from 24 to 60 fps and encoded with every frame a
+ * keyframe, so any frame decodes on its own and a seek lands in one paint. Desktop gets 1080p; phones
+ * get a "tall" 720p cut (1280×1260) with each frame's blurred continuation baked in below it, the
+ * moving counterpart of the stills' .ext. Until a clip is loaded (or with reduced motion / data
+ * saver) the CSS zoom over the stills plays instead.
+ */
+const CLIPS: Partial<Record<Scene, string>> = {
+  remy: "take-stove",
+  heladera: "take-fridge",
+  walk: "take-walk",
+  sleepsync: "take-bed",
+  dawn: "take-dawn",
+};
+const CLIP_FPS = 60;
 
 // With reduced motion the camera never zooms; scenes only cross-fade.
 const still = (set: Shots): Shots =>
@@ -97,10 +123,10 @@ const mix = (a: Shot, b: Shot, p: number): Shot => ({
 const nudge = (a: Shot, dx: number): Shot => ({ ...a, t: { x: a.t.x + dx, y: a.t.y } });
 
 /**
- * Writes the transform that frames `cam` inside a frame of `fw`×`fh` for a plate of `w`×`h`
- * (unscaled) and returns the plate centre's offset from the frame centre.
+ * The plate centre's offset from the frame centre that frames `cam` inside a frame of `fw`×`fh`
+ * for a plate of `w`×`h` (unscaled).
  */
-function place(el: HTMLElement, w: number, h: number, fw: number, fh: number, cam: Shot, edges: Edges) {
+function frameFor(w: number, h: number, fw: number, fh: number, cam: Shot, edges: Edges) {
   let tx = cam.t.x * fw - fw / 2 - (cam.f.x - 0.5) * w * cam.s;
   let ty = cam.t.y * fh - fh / 2 - (cam.f.y - 0.5) * h * cam.s;
   if (edges !== "free") {
@@ -111,8 +137,18 @@ function place(el: HTMLElement, w: number, h: number, fw: number, fh: number, ca
     tx = edges === "allowLeft" ? Math.max(minX, tx) : Math.min(maxX, Math.max(minX, tx));
     ty = edges === "allowBottom" ? Math.min(maxY, ty) : Math.min(maxY, Math.max(minY, ty));
   }
-  el.style.transform = `translate(-50%, -50%) translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${cam.s.toFixed(4)})`;
   return { tx, ty };
+}
+
+function apply(el: HTMLElement, tx: number, ty: number, s: number) {
+  el.style.transform = `translate(-50%, -50%) translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${s.toFixed(4)})`;
+}
+
+/** Writes the transform that frames `cam` (see frameFor) and returns the offset it used. */
+function place(el: HTMLElement, w: number, h: number, fw: number, fh: number, cam: Shot, edges: Edges) {
+  const at = frameFor(w, h, fw, fh, cam, edges);
+  apply(el, at.tx, at.ty, cam.s);
+  return at;
 }
 
 function getProject(id: string): Project {
@@ -155,7 +191,7 @@ const HOUSE_PROJECTS: { scene: ProjectScene; project: Project; hour: string; var
   },
 ];
 
-const ORDER: Scene[] = ["intro", "work", "remy", "heladera", "walk", "withdrawal", "jarvis", "sleepsync"];
+const ORDER: Scene[] = ["intro", "work", "remy", "heladera", "walk", "withdrawal", "jarvis", "sleepsync", "dawn"];
 
 type Props = {
   t: Translate;
@@ -163,34 +199,107 @@ type Props = {
   intro: React.ReactNode;
   /** "Selected work" statement shown before the camera starts moving. */
   workIntro: React.ReactNode;
+  /** The 06:00 heading that closes the night over the bedroom at dawn (the About section's title). */
+  dawn: React.ReactNode;
 };
 
-export default function NightHouse({ t, intro, workIntro }: Props) {
+export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Props) {
+  const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const kitchenRef = useRef<HTMLDivElement>(null);
   const stoveRef = useRef<HTMLDivElement>(null);
   const fridgeRef = useRef<HTMLDivElement>(null);
   const deskRef = useRef<HTMLDivElement>(null);
   const bedRef = useRef<HTMLDivElement>(null);
+  const dawnRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const darkRef = useRef<HTMLDivElement>(null);
-  const warmRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const segRefs = useRef<Partial<Record<Scene, HTMLElement | null>>>({});
+  const clipRefs = useRef<Partial<Record<Scene, HTMLVideoElement | null>>>({});
+  // The layer each clip lives in; the camera moves this, and on phones the tall video hangs below it.
+  const clipLayerRefs = useRef<Partial<Record<Scene, HTMLDivElement | null>>>({});
+  const clipReady = useRef<Partial<Record<Scene, boolean>>>({});
+
+  // Load each transition clip only when its scene is getting close, and never with reduced
+  // motion or data saver on. Crossing the desktop/phone breakpoint later (a tablet turning) swaps
+  // the loaded clips for the other cut, so phones never show a clip without its continuation.
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    if (reduce || saveData) return;
+    const desktop = window.matchMedia("(min-width: 900px)");
+    const wanted = new Set<Scene>();
+
+    const load = (scene: Scene) => {
+      const video = clipRefs.current[scene];
+      const name = CLIPS[scene];
+      if (!video || !name) return;
+      clipReady.current[scene] = false;
+      video.addEventListener(
+        "loadeddata",
+        () => {
+          // iOS Safari only paints seeked frames once the video has played; muted inline
+          // playback is allowed without a gesture. If it's refused, the stills stay in charge.
+          video
+            .play()
+            .then(() => {
+              video.pause();
+              // Read from the source actually loaded, in case the cut was swapped mid-load.
+              video.dataset.tall = video.currentSrc.endsWith("-720.mp4") ? "1" : "0";
+              clipReady.current[scene] = true;
+              window.dispatchEvent(new Event("scroll"));
+            })
+            .catch(() => undefined);
+        },
+        { once: true },
+      );
+      video.src = `/night/clips/${name}-${desktop.matches ? "1080" : "720"}.mp4`;
+      video.load();
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          io.unobserve(entry.target);
+          const scene = (entry.target as HTMLElement).dataset.scene as Scene;
+          wanted.add(scene);
+          load(scene);
+        }
+      },
+      { rootMargin: "150% 0px" },
+    );
+    for (const scene of Object.keys(CLIPS) as Scene[]) {
+      const el = segRefs.current[scene];
+      if (el) io.observe(el);
+    }
+    const swap = () => wanted.forEach(load);
+    desktop.addEventListener("change", swap);
+    return () => {
+      io.disconnect();
+      desktop.removeEventListener("change", swap);
+    };
+  }, []);
 
   useEffect(() => {
+    const stage = stageRef.current;
     const frame = frameRef.current;
     const kitchen = kitchenRef.current;
     const stove = stoveRef.current;
     const fridge = fridgeRef.current;
     const desk = deskRef.current;
     const bed = bedRef.current;
+    const dawn = dawnRef.current;
     const screen = screenRef.current;
     const dark = darkRef.current;
-    const warm = warmRef.current;
+    const scrim = scrimRef.current;
     const end = endRef.current;
-    if (!frame || !kitchen || !stove || !fridge || !desk || !bed || !screen || !dark || !warm || !end) return;
+    if (!stage || !frame || !kitchen || !stove || !fridge || !desk || !bed || !dawn || !screen || !dark || !scrim || !end) {
+      return;
+    }
 
     const track = trackRef.current;
     if (!track) return;
@@ -216,15 +325,18 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
     // trackpad flicks become one continuous move instead of a series of jumps.
     let smoothY = window.scrollY;
     let last = 0;
-    let prev = { layer: "", s: 1 };
 
-    const render = (Y: number, dt: number) => {
+    const render = (Y: number) => {
       const base = desktop.matches ? DESKTOP : MOBILE;
       const S = reduce.matches ? still(base) : base;
-      const V = window.innerHeight;
+      // The stage is 100svh, the same unit the segments are laid out in. window.innerHeight grows
+      // and shrinks with the phone's URL bar, which made the camera jump mid-scene.
+      const V = stage.clientHeight;
       const fw = frame.clientWidth;
       const fh = frame.clientHeight;
       const close: Edges = desktop.matches ? "allowLeft" : "allowBottom";
+      // The bed as SleepSync leaves it (after its slow push), where the dawn time-lapse is framed too.
+      const bedEnd: Shot = { ...S.bed, s: S.bed.s + (reduce.matches ? 0 : 0.04) };
 
       // Everything the frame shows; each scene below overrides what it needs.
       const st = {
@@ -233,22 +345,35 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
         fridge: { cam: S.fridgeHold, o: 0 },
         desk: { cam: S.deskBase, o: 0, edges: "cover" as Edges },
         bed: { cam: S.bed, o: 0, edges: "cover" as Edges },
+        dawn: 0,
         screen: { o: 0, game: 0, voice: 0 },
+        // lift: 0 frames the clip like the wide plates (cover), 1 like the close-ups (`close`).
+        clip: null as null | { scene: Scene; cam: Shot; o: number; lift: number; t: number },
         night: 0,
-        warm: 0,
+        scrim: 1,
         end: 0,
         blur: 0,
       };
+
+      // A transition clip that's loaded and allowed to play, or null to fall back to the stills.
+      const readyClip = (scene: Scene) => {
+        const c = clipRefs.current[scene];
+        return c && clipReady.current[scene] && !reduce.matches && c.duration > 0 ? c : null;
+      };
+      // Clip opacity: in right away (its first frame matches the still underneath), out once the
+      // still that matches its last frame has fully covered it.
+      const clipOpacity = (k: number) => clamp01(k / 0.03) * (1 - clamp01((k - 0.98) / 0.02));
+      const clipTime = (c: HTMLVideoElement, k: number) => k * Math.max(0, c.duration - 0.05);
 
       const seg = segs.find((sg) => Y >= sg.top && Y < sg.top + sg.height);
       const active = seg?.id;
 
       if (!seg || !active) {
-        // Past the house: hold the last frame (the bed at first light).
+        // Past the house: hold the last frame (the bedroom at dawn, melted into cream at the bottom).
         if (segs.length > 0 && Y >= segs[0].top) {
           st.kitchen.o = 0;
-          st.bed.o = 1;
-          st.warm = 0.5;
+          st.dawn = 1;
+          st.scrim = 0;
           st.end = 1;
         }
       } else {
@@ -271,35 +396,69 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
           case "remy":
           case "heladera": {
             const z = zIn * (1 - zOut);
-            const reveal = clamp01((z - 0.55) / 0.4);
             const isRemy = active === "remy";
-            st.kitchen.cam = mix(S.base, isRemy ? S.stove : S.fridge, z);
-            const cam = mix(isRemy ? S.stoveIn : S.fridgeIn, isRemy ? S.stoveHold : S.fridgeHold, reveal);
-            if (!reduce.matches) cam.s += 0.05 * hold * reveal;
-            st[isRemy ? "stove" : "fridge"] = { cam, o: reveal };
+            const holdShot = isRemy ? S.stoveHold : S.fridgeHold;
+            const clip = readyClip(active);
+            if (clip) {
+              // The clip is the camera: its first frame is the kitchen framed at `base`, its last the
+              // close-up framed at the hold shot, so the stills hand over without a jump at both ends.
+              st.kitchen.cam = S.base;
+              // Once the clip is opaque the wide plate under it is hidden: it would only peek out
+              // where the clip slides aside (its masked left edge on desktop, its bottom on phones).
+              st.kitchen.o = z < 0.03 ? 1 : 0;
+              // The still matches the clip's last frame, so it only takes over at the very end (any
+              // earlier and it would ghost over the moving clip), and it's opaque before the clip fades.
+              const reveal = clamp01((z - 0.96) / 0.02);
+              const cam = { ...holdShot };
+              if (!reduce.matches) cam.s += 0.05 * hold * reveal;
+              st[isRemy ? "stove" : "fridge"] = { cam, o: reveal };
+              st.clip = { scene: active, cam: mix(S.base, holdShot, z), o: clipOpacity(z), lift: z, t: clipTime(clip, z) };
+            } else {
+              const reveal = clamp01((z - 0.55) / 0.4);
+              st.kitchen.cam = mix(S.base, isRemy ? S.stove : S.fridge, z);
+              const cam = mix(isRemy ? S.stoveIn : S.fridgeIn, holdShot, reveal);
+              if (!reduce.matches) cam.s += 0.05 * hold * reveal;
+              st[isRemy ? "stove" : "fridge"] = { cam, o: reveal };
+            }
             st.night = isRemy ? lerp(0.03, 0.07, p) : lerp(0.07, 0.15, p);
             break;
           }
           case "walk": {
-            // Down the hallway: push into the door while the house goes dark.
             const w = ease(clamp01(y / Math.max(1, len - V)));
-            st.kitchen.cam = mix(S.base, S.door, w);
-            st.night = lerp(0.15, 1, Math.pow(w, 1.6));
+            const clip = readyClip("walk");
+            if (clip) {
+              // Through the hallway door and into the bedroom: the clip walks from the kitchen to the desk,
+              // and the desk plate (its last frame) takes over at the very end, as with the close-ups.
+              st.kitchen.cam = S.base;
+              st.kitchen.o = w < 0.03 ? 1 : 0;
+              st.desk = { cam: S.deskBase, o: clamp01((w - 0.96) / 0.02), edges: "cover" };
+              st.clip = { scene: "walk", cam: mix(S.base, S.deskBase, w), o: clipOpacity(w), lift: 0, t: clipTime(clip, w) };
+              st.night = lerp(0.15, 0.06, w);
+            } else {
+              // Fallback: push into the door while the house goes dark.
+              st.kitchen.cam = mix(S.base, S.door, w);
+              st.night = lerp(0.15, 1, Math.pow(w, 1.6));
+            }
             break;
           }
           case "withdrawal":
           case "jarvis": {
-            // The bedroom desk. Withdrawal fades in from the dark hallway; the screen turns on as the
-            // camera reaches it and goes dark again on the way out ("the PC dims, we stay in the room").
+            // The bedroom desk. Withdrawal fades in from the dark hallway (unless the walk clip already
+            // brought us here); the screen turns on as the camera reaches it and goes dark again on the
+            // way out ("the PC dims, we stay in the room").
             const isGame = active === "withdrawal";
-            const fadeIn = isGame ? ease(clamp01(y / (0.45 * V))) : 1;
+            const fadeIn = isGame && !readyClip("walk") ? ease(clamp01(y / (0.45 * V))) : 1;
             const zi = isGame ? ease(clamp01((y - 0.3 * V) / (0.75 * V))) : zIn;
             const z = zi * (1 - zOut);
             st.kitchen.o = 0;
             st.desk = { cam: mix(S.deskBase, S.monitor, z), o: 1, edges: "cover" };
             const on = clamp01((zi - 0.35) / 0.35) * (1 - clamp01(zOut / 0.5));
             st.screen = {
-              o: isGame ? clamp01((zi - 0.15) / 0.3) : 1,
+              // After JARVIS the overlay fades away so the monitor shows the plate's own glow — the
+              // first frame of the turnaround clip — instead of jumping from a black screen to it.
+              o: isGame
+                ? clamp01((zi - 0.15) / 0.3)
+                : 1 - (readyClip("sleepsync") ? clamp01((zOut - 0.5) / 0.5) : 0),
               game: isGame ? on : 0,
               voice: isGame ? 0 : on,
             };
@@ -307,19 +466,54 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
             break;
           }
           case "sleepsync": {
-            // Turn around: the desk whips off to the left and the bed swings in from the right.
             const turn = ease(clamp01(y / (0.7 * V)));
             st.kitchen.o = 0;
-            st.desk = { cam: nudge(S.deskBase, -0.45 * turn), o: 1 - turn, edges: "free" };
-            const bedCam = nudge(S.bed, 0.45 * (1 - turn));
-            if (!reduce.matches) bedCam.s += 0.04 * hold;
-            st.bed = { cam: bedCam, o: turn, edges: turn < 1 ? "free" : "cover" };
-            st.screen = { o: 1 - turn, game: 0, voice: 0 };
-            st.blur = reduce.matches ? 0 : Math.sin(Math.PI * turn) * 9;
-            // First light creeps in before the dawn section takes over.
-            st.warm = 0.5 * clamp01((y - (len - 1.3 * V)) / (1.1 * V));
-            st.night = lerp(0.1, 0, st.warm * 2);
-            st.end = ease(clamp01((y - (len - 1.1 * V)) / (0.9 * V)));
+            const clip = readyClip("sleepsync");
+            if (clip) {
+              // The clip turns the camera from the desk to the bed. It sits under the desk plate in the
+              // DOM, so the desk (identical to its first frame) fades out as the clip fades in.
+              const o = clipOpacity(turn);
+              st.desk = { cam: S.deskBase, o: turn > 0.5 ? 0 : 1 - o, edges: "cover" };
+              const bedCam = { ...S.bed };
+              if (!reduce.matches) bedCam.s += 0.04 * hold;
+              st.bed = { cam: bedCam, o: clamp01((turn - 0.96) / 0.02), edges: "cover" };
+              st.screen = { o: 0, game: 0, voice: 0 };
+              st.clip = { scene: "sleepsync", cam: mix(S.deskBase, S.bed, turn), o, lift: 0, t: clipTime(clip, turn) };
+            } else {
+              // Fallback: the desk whips off to the left and the bed swings in from the right.
+              st.desk = { cam: nudge(S.deskBase, -0.45 * turn), o: 1 - turn, edges: "free" };
+              const bedCam = nudge(S.bed, 0.45 * (1 - turn));
+              if (!reduce.matches) bedCam.s += 0.04 * hold;
+              st.bed = { cam: bedCam, o: turn, edges: turn < 1 ? "free" : "cover" };
+              st.screen = { o: 1 - turn, game: 0, voice: 0 };
+              st.blur = reduce.matches ? 0 : Math.sin(Math.PI * turn) * 9;
+            }
+            st.night = 0.1;
+            break;
+          }
+          case "dawn": {
+            // 06:00: the camera stays on the bed while the time-lapse turns the night into sunrise, then
+            // the bottom of the frame melts into the cream of the About section under the heading.
+            const d = ease(clamp01(y / (0.9 * V)));
+            st.kitchen.o = 0;
+            const clip = readyClip("dawn");
+            if (clip) {
+              // Same hand-offs as the turnaround: the bed (the clip's first frame) sits above it and fades
+              // out as it fades in; the dawn plate (its last frame) covers it at the very end.
+              const o = clipOpacity(d);
+              st.bed = { cam: bedEnd, o: d > 0.5 ? 0 : 1 - o, edges: "cover" };
+              st.dawn = clamp01((d - 0.96) / 0.02);
+              st.clip = { scene: "dawn", cam: bedEnd, o, lift: 0, t: clipTime(clip, d) };
+            } else {
+              st.bed = { cam: bedEnd, o: 1, edges: "cover" };
+              st.dawn = d;
+            }
+            st.night = lerp(0.1, 0, d);
+            // The cards' scrim has nothing left to shade, and it would muddy the morning light.
+            st.scrim = 1 - d;
+            // The melt into cream finishes before the stage starts scrolling away (the last screen of the
+            // segment), so its bottom edge is already the About section's colour when it leaves.
+            st.end = ease(clamp01((y - 0.9 * V) / Math.max(1, len - 1.9 * V)));
             break;
           }
         }
@@ -332,6 +526,24 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
 
       place(kitchen, kitchen.offsetWidth, kitchen.offsetHeight, fw, fh, st.kitchen.cam, "cover");
       show(kitchen, st.kitchen.o);
+      for (const [scene, video] of Object.entries(clipRefs.current) as [Scene, HTMLVideoElement | null][]) {
+        const layer = clipLayerRefs.current[scene];
+        if (!video || !layer) continue;
+        const c = st.clip?.scene === scene ? st.clip : null;
+        if (c && c.o > 0) {
+          // Blend between the two clamps instead of switching, so the framing never jumps: the clip
+          // starts exactly where the wide plate is and ends exactly where the close-up takes over.
+          const vw = layer.offsetWidth;
+          const vh = layer.offsetHeight;
+          const a = frameFor(vw, vh, fw, fh, c.cam, "cover");
+          const b = c.lift > 0 ? frameFor(vw, vh, fw, fh, c.cam, close) : a;
+          apply(layer, lerp(a.tx, b.tx, c.lift), lerp(a.ty, b.ty, c.lift), c.cam.s);
+          // One seek at a time: a new seek cancels the pending one before its frame is painted, so on
+          // fast screens most frames were skipped. The `seeked` listener re-renders to catch up.
+          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) video.currentTime = c.t;
+        }
+        show(layer, c ? c.o : 0);
+      }
       for (const [el, s] of [
         [stove, st.stove],
         [fridge, st.fridge],
@@ -348,15 +560,12 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       show(desk, st.desk.o);
       if (st.bed.o > 0) place(bed, bed.offsetWidth, bed.offsetHeight, fw, fh, st.bed.cam, st.bed.edges);
       show(bed, st.bed.o);
+      if (st.dawn > 0) place(dawn, dawn.offsetWidth, dawn.offsetHeight, fw, fh, bedEnd, "cover");
+      show(dawn, st.dawn);
 
-      // A touch of motion blur while the camera zooms fast (desktop only; filters are costly on phones).
-      const lead = st.kitchen.o > 0.5 ? "kitchen" : st.desk.o > 0.5 ? "desk" : "bed";
-      const leadS = st[lead].cam.s;
-      const zoomSpeed = prev.layer === lead && dt > 0 ? Math.abs(leadS - prev.s) / dt : 0;
-      prev = { layer: lead, s: leadS };
-      const motion = desktop.matches && !reduce.matches ? Math.min(2, zoomSpeed * 0.5) : 0;
-      const blur = Math.max(st.blur, motion);
-      frame.style.filter = blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "";
+      // Only the no-clip turnaround blurs. (Zooms used to get a speed-based motion blur too, but a
+      // filter over the whole frame re-composites every layer each frame and hitches as it toggles.)
+      frame.style.filter = st.blur > 0.25 ? `blur(${st.blur.toFixed(2)}px)` : "";
 
       // The screen is real DOM laid over the monitor, sized for its closest framing so it stays sharp
       // and only ever scales down.
@@ -377,7 +586,7 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       screen.dataset.mode = st.screen.voice > 0.01 ? "voice" : st.screen.game > 0.01 ? "game" : "off";
 
       dark.style.opacity = st.night.toFixed(3);
-      warm.style.opacity = st.warm.toFixed(3);
+      scrim.style.opacity = st.scrim.toFixed(3);
       end.style.opacity = st.end.toFixed(3);
     };
 
@@ -387,17 +596,16 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       last = now;
       const target = window.scrollY;
       // Snap on reduced motion and on long jumps (nav links, restored scroll) so the camera
-      // doesn't fly through every room on the way. A snap isn't motion: no blur for it.
+      // doesn't fly through every room on the way.
       if (reduce.matches || Math.abs(target - smoothY) > 2 * window.innerHeight) {
         smoothY = target;
-        prev = { layer: "", s: 1 };
       } else {
         smoothY += (target - smoothY) * (1 - Math.exp(-dt * 9));
       }
       if (Math.abs(target - smoothY) < 0.5) smoothY = target;
-      render(smoothY, dt);
-      // Keep going until the camera has arrived and its motion blur has cleared.
-      if (smoothY !== target || frame.style.filter !== "") raf = requestAnimationFrame(step);
+      render(smoothY);
+      // Keep going until the camera has arrived.
+      if (smoothY !== target) raf = requestAnimationFrame(step);
       else last = 0;
     };
 
@@ -410,9 +618,11 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
     };
 
     measure();
-    render(smoothY, 0);
+    render(smoothY);
     const ro = new ResizeObserver(remeasure);
     ro.observe(track);
+    const videos = Object.values(clipRefs.current).filter((v): v is HTMLVideoElement => !!v);
+    for (const v of videos) v.addEventListener("seeked", schedule);
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", remeasure);
     reduce.addEventListener("change", schedule);
@@ -420,6 +630,7 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      for (const v of videos) v.removeEventListener("seeked", schedule);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", remeasure);
       reduce.removeEventListener("change", schedule);
@@ -435,25 +646,54 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
 
   return (
     <section className={h.house}>
-      <div className={h.stage} aria-hidden="true">
+      <div ref={stageRef} className={h.stage} aria-hidden="true">
         <div ref={frameRef} className={h.frame}>
           <div ref={kitchenRef} className={h.layer} style={plate(16 / 9)}>
-            <Image className={h.img} src="/night/house-kitchen.webp" alt="" width={2048} height={1152} priority />
+            <Image className={h.img} src="/night/house-kitchen.webp" alt="" width={4096} height={2304} priority />
+            <Ext plate="house-kitchen" />
             <div className={h.lamp} />
           </div>
-          <div ref={stoveRef} className={`${h.layer} ${h.close}`} style={plate(1392 / 752)} data-on="0">
-            <Image className={h.img} src="/night/house-stove.webp" alt="" width={1392} height={752} />
+          {(Object.keys(CLIPS) as Scene[]).map((scene) => (
+            <div
+              key={scene}
+              ref={(el) => {
+                clipLayerRefs.current[scene] = el;
+              }}
+              className={`${h.layer} ${h.clip}`}
+              style={plate(16 / 9)}
+            >
+              <video
+                ref={(el) => {
+                  clipRefs.current[scene] = el;
+                }}
+                className={h.clipVideo}
+                muted
+                playsInline
+                preload="none"
+              />
+            </div>
+          ))}
+          <div ref={stoveRef} className={`${h.layer} ${h.close}`} style={plate(16 / 9)} data-on="0">
+            <Image className={h.img} src="/night/house-stove.webp" alt="" width={1920} height={1080} />
+            <Ext plate="house-stove" />
             <StoveFx />
           </div>
-          <div ref={fridgeRef} className={`${h.layer} ${h.close}`} style={plate(1392 / 752)} data-on="0">
-            <Image className={h.img} src="/night/house-fridge.webp" alt="" width={1392} height={752} />
+          <div ref={fridgeRef} className={`${h.layer} ${h.close}`} style={plate(16 / 9)} data-on="0">
+            <Image className={h.img} src="/night/house-fridge.webp" alt="" width={1920} height={1080} />
+            <Ext plate="house-fridge" />
             <FridgeFx t={t} layerRef={fridgeRef} />
           </div>
           <div ref={deskRef} className={`${h.layer} ${h.later}`} style={plate(16 / 9)}>
-            <Image className={h.img} src="/night/house-desk.webp" alt="" width={2048} height={1152} />
+            <Image className={h.img} src="/night/house-desk.webp" alt="" width={1920} height={1080} />
+            <Ext plate="house-desk" />
           </div>
           <div ref={bedRef} className={`${h.layer} ${h.later}`} style={plate(16 / 9)}>
-            <Image className={h.img} src="/night/bedroom.webp" alt="" width={2048} height={1152} />
+            <Image className={h.img} src="/night/bedroom.webp" alt="" width={1920} height={1080} />
+            <Ext plate="bedroom" />
+          </div>
+          <div ref={dawnRef} className={`${h.layer} ${h.later}`} style={plate(16 / 9)}>
+            <Image className={h.img} src="/night/dawn.webp" alt="" width={1920} height={1080} />
+            <Ext plate="dawn" />
           </div>
           <div ref={screenRef} className={h.screen} data-mode="off">
             <WithdrawalReel />
@@ -461,9 +701,8 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
             <div className={h.screenGlass} />
           </div>
           <div ref={darkRef} className={h.dark} />
-          <div ref={warmRef} className={h.warm} />
         </div>
-        <div className={h.scrim} />
+        <div ref={scrimRef} className={h.scrim} />
         <div ref={endRef} className={h.endFade} />
       </div>
 
@@ -477,13 +716,24 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
         {HOUSE_PROJECTS.slice(0, 2).map((p) => (
           <ProjectCard key={p.scene} {...p} t={t} segRef={seg(p.scene)} />
         ))}
-        <div ref={seg("walk")} className={h.segWalk} data-hour="00:00" data-tone="dark" />
+        <div ref={seg("walk")} className={h.segWalk} data-scene="walk" data-hour="00:00" data-tone="dark" />
         {HOUSE_PROJECTS.slice(2).map((p) => (
           <ProjectCard key={p.scene} {...p} t={t} segRef={seg(p.scene)} />
         ))}
+        <div ref={seg("dawn")} className={h.segDawn} data-scene="dawn" data-hour="06:00" data-tone="light">
+          {dawnIntro}
+        </div>
       </div>
     </section>
   );
+}
+
+/**
+ * Phones only: the plate's blurred continuation below the frame (built from the plate's bottom edge,
+ * mirrored and blurred), so the picture runs on behind the parked card instead of ending in a line.
+ */
+function Ext({ plate }: { plate: string }) {
+  return <div className={h.ext} style={{ backgroundImage: `url(/night/ext/${plate}.webp)` }} />;
 }
 
 function ProjectCard({
@@ -506,6 +756,7 @@ function ProjectCard({
       ref={segRef}
       className={h.segProject}
       aria-labelledby={`${proj.id}-title`}
+      data-scene={scene}
       data-hour={hour}
       data-tone="dark"
     >
@@ -569,13 +820,16 @@ function StoveFx() {
   );
 }
 
-// Item boxes on the open-fridge plate (fractions of the 1392×752 image), in the order of
-// `strings.night.fridge.items`: milk, tomatoes, cheese, lettuce.
-const FRIDGE_ITEMS: { x: number; y: number; w: number; h: number }[] = [
-  { x: 0.379, y: 0.263, w: 0.052, h: 0.176 },
-  { x: 0.368, y: 0.658, w: 0.067, h: 0.102 },
-  { x: 0.413, y: 0.652, w: 0.108, h: 0.093 },
-  { x: 0.442, y: 0.775, w: 0.096, h: 0.113 },
+// Item boxes on the open-fridge plate (fractions of the image, measured on the fridge take's last
+// frame), in the order of `strings.night.fridge.items`: milk, tomatoes, cheese, lettuce.
+// `label`: where its name goes. Above, unless that covers another item (the cheese sits against the
+// tomatoes, the lettuce right under them); "aboveDesktop" moves to the side on phones, where the
+// milk's top is right under the nav.
+const FRIDGE_ITEMS: { x: number; y: number; w: number; h: number; label: "above" | "right" | "aboveDesktop" }[] = [
+  { x: 0.555, y: 0.572, w: 0.056, h: 0.201, label: "aboveDesktop" },
+  { x: 0.59, y: 0.711, w: 0.065, h: 0.071, label: "above" },
+  { x: 0.642, y: 0.75, w: 0.036, h: 0.046, label: "right" },
+  { x: 0.591, y: 0.817, w: 0.086, h: 0.13, label: "right" },
 ];
 
 const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
@@ -626,7 +880,7 @@ function FridgeFx({ t, layerRef }: { t: Translate; layerRef: React.RefObject<HTM
                 backgroundPosition: `${((it.x / (1 - it.w)) * 100).toFixed(2)}% ${((it.y / (1 - it.h)) * 100).toFixed(2)}%`,
               }}
             />
-            <div className={h.box} data-on={isSel} style={style}>
+            <div className={h.box} data-on={isSel} data-label={it.label} style={style}>
               <span className={h.label}>
                 <span className={h.check} data-done={i < ticked}>
                   ✓

@@ -25,23 +25,6 @@ type Props = {
 
 type Tone = "dark" | "light";
 
-function Plate({ name }: { name: string }) {
-  return (
-    <picture className={s.plate}>
-      <source media="(max-width: 900px)" srcSet={`/night/${name}-1024.webp`} type="image/webp" />
-      <img
-        className={s.plateImg}
-        src={`/night/${name}.webp`}
-        alt=""
-        width={2048}
-        height={1152}
-        loading="lazy"
-        decoding="async"
-      />
-    </picture>
-  );
-}
-
 export default function PortfolioNight({ lang, setLang }: Props) {
   const t: Translate = (value) => pick(value, lang);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -153,6 +136,19 @@ export default function PortfolioNight({ lang, setLang }: Props) {
     </div>
   );
 
+  // 06:00: the About heading closes the night in the same bedroom, over the dawn time-lapse; the
+  // section it titles (below) continues in the cream the picture melts into.
+  const dawnIntro = (
+    <div id="about" className={s.dawnIntro}>
+      <p className={s.hour} data-reveal="">
+        06:00 — {t(strings.night.hours.dawn)}
+      </p>
+      <h2 id="about-title" className={s.dawnTitle} data-reveal="">
+        {t(strings.sections.about)}
+      </h2>
+    </div>
+  );
+
   return (
     <div ref={rootRef} className={s.root} data-screen-label="One Night">
       <div className={s.grain} aria-hidden="true" />
@@ -183,29 +179,10 @@ export default function PortfolioNight({ lang, setLang }: Props) {
       </nav>
 
       <main>
-        <NightHouse t={t} intro={intro} workIntro={workIntro} />
+        <NightHouse t={t} intro={intro} workIntro={workIntro} dawn={dawnIntro} />
 
-        {/* 06:00 — dawn */}
-        <section
-          id="about"
-          className={s.dawn}
-          aria-labelledby="about-title"
-          data-hour="06:00"
-          data-tone="light"
-        >
-          <div className={s.dawnHead}>
-            <Plate name="dawn" />
-            <div className={s.shade} />
-            <div className={s.headContent}>
-              <p className={s.hour} data-reveal="">
-                06:00 — {t(strings.night.hours.dawn)}
-              </p>
-              <h2 id="about-title" className={s.dawnTitle} data-reveal="">
-                {t(strings.sections.about)}
-              </h2>
-            </div>
-          </div>
-
+        {/* 06:00 — dawn: titled by the heading that closes the house above */}
+        <section className={s.dawn} aria-labelledby="about-title" data-hour="06:00" data-tone="light">
           <div className={s.about}>
             <div>
               <div className={s.block} data-reveal="">

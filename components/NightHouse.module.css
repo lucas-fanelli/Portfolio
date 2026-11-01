@@ -48,6 +48,35 @@
   visibility: hidden;
 }
 
+/* Scroll-scrubbed transition clip (see CLIPS in NightHouse.tsx). */
+.clip {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.clipVideo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+/* The phone cut is 1280×1260: the 16:9 frame on top fills the layer, and its baked-in blurred
+   continuation (75% of the frame's height) hangs below it, like the stills' .ext. */
+.clipVideo[data-tall="1"] {
+  height: 175%;
+}
+
+/* Phones only (see the media query below): a plate's blurred continuation, laid over its last fifth
+   (where it fades in) and running on below it. */
+.ext {
+  display: none;
+}
+
 .close[data-on="0"] * {
   animation-play-state: paused !important;
 }
@@ -56,21 +85,6 @@
   position: absolute;
   inset: 0;
   background: #04060b;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* First light through the bedroom window, just before the dawn section. */
-.warm {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 52% 22%,
-    rgba(255, 196, 150, 0.6) 0%,
-    rgba(255, 170, 120, 0.18) 45%,
-    rgba(255, 170, 120, 0) 75%
-  );
-  mix-blend-mode: screen;
   opacity: 0;
   pointer-events: none;
 }
@@ -173,12 +187,14 @@
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
 }
 
-/* As the house ends, the stage's bottom fades into the dawn section's opening colour (#070b17). */
+/* At dawn the stage's bottom melts into the cream of the About section that follows (its --bg,
+   #f2ebe1), so the page carries on from the morning picture without a seam. */
 .endFade {
   position: absolute;
   inset: auto 0 0 0;
   height: 55%;
-  background: linear-gradient(180deg, rgba(7, 11, 23, 0) 0%, rgba(7, 11, 23, 0.85) 70%, #070b17 100%);
+  /* Solid for the last stretch, so the stage's bottom edge is exactly the section's colour. */
+  background: linear-gradient(180deg, rgba(242, 235, 225, 0) 0%, rgba(242, 235, 225, 0.85) 55%, #f2ebe1 82%);
   opacity: 0;
   pointer-events: none;
 }
@@ -187,19 +203,20 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Phones: the frame covers the top 64svh; fade only its bottom edge into the stage, short
-     enough to keep most of the frame clear. */
+  /* Phones: dim the blurred continuation below the frame so the card reads on it, darkest at the
+     bottom of the screen, and keep the frame itself clear. */
   background: linear-gradient(
     0deg,
-    #0b0c0e 0%,
-    #0b0c0e 36%,
-    rgba(11, 12, 14, 0.55) 42%,
-    rgba(11, 12, 14, 0) 52%
+    rgba(11, 12, 14, 0.9) 0%,
+    rgba(11, 12, 14, 0.66) 22%,
+    rgba(11, 12, 14, 0.28) 38%,
+    rgba(11, 12, 14, 0) 50%
   );
 }
 
 @media (min-width: 900px) {
-  .close {
+  .close,
+  .clip {
     /* Close-ups slide right to clear the cards; their left edge fades into the stage. */
     mask-image: linear-gradient(to right, transparent 0%, #000 24%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 24%);
@@ -213,9 +230,30 @@
 }
 
 @media (max-width: 899px) {
+  /* The camera frames its subjects in the top 64svh, but the frame only clips sideways: each plate's
+     blurred continuation hangs below it, so the picture melts into the card area instead of ending
+     in a hard line (the stage still clips at the bottom of the screen). */
   .frame {
     bottom: auto;
     height: 64svh;
+    overflow: clip visible;
+  }
+
+  .ext {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 80%;
+    width: 100%;
+    height: 95%;
+    background-size: 100% 100%;
+    pointer-events: none;
+  }
+
+  /* Night falls on the continuation too. */
+  .dark {
+    bottom: auto;
+    height: 100svh;
   }
 }
 
@@ -235,8 +273,19 @@
   padding: 82vh 0 96vh;
 }
 
+/* The walk crosses two rooms, so it gets a full screen of scroll instead of the usual ¾. */
 .segWalk {
-  height: 170vh;
+  height: 200vh;
+}
+
+/* 06:00: almost a screen of scroll for the dawn time-lapse, ~0.6 screen for the bottom to melt into
+   cream, then the last screen, where the About heading rises over that cream as the stage leaves. */
+.segDawn {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 250svh;
+  padding: 0 var(--gutter) clamp(40px, 8svh, 80px);
 }
 
 @media (max-width: 899px) {
@@ -274,11 +323,17 @@
 
 /* Must come after the base .card rule (same specificity): parked at the bottom on phones. */
 @media (max-width: 899px) {
+  /* No backdrop blur on phones: the scene behind the card moves every frame, so the blur would be
+     recomputed every frame too. What sits behind the card is the plates' blurred continuation
+     (.ext), so a slightly translucent fill already reads as frosted glass. */
   .card {
     position: sticky;
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100svh - 84px - 76px);
     padding: 18px 18px 20px;
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   /* Only an opened card (details shown) scrolls on its own, and it hands the gesture back to the
@@ -385,14 +440,15 @@
   }
 }
 
+/* Glow of the gas burner under the pan (the plate's flame is blue). */
 .flame {
   position: absolute;
   left: 33%;
-  top: 80%;
+  top: 76%;
   width: 30%;
   height: 18%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(255, 110, 40, 0.6) 0%, rgba(255, 110, 40, 0) 70%);
+  background: radial-gradient(ellipse at center, rgba(90, 140, 255, 0.5) 0%, rgba(90, 140, 255, 0) 70%);
   mix-blend-mode: screen;
   animation: flame 1.4s ease-in-out infinite;
 }
@@ -521,10 +577,11 @@
   }
 }
 
+/* In the empty space right of the milk, above the tomatoes. */
 .counter {
   position: absolute;
-  left: 47%;
-  top: 13%;
+  left: 62%;
+  top: 57%;
   z-index: 3;
   padding: 6px 12px;
   border-radius: 999px;
@@ -543,19 +600,42 @@
   font-weight: 500;
 }
 
+/* Side labels (see `label` in FRIDGE_ITEMS). */
+.box[data-label="right"] .label {
+  left: calc(100% + 6px);
+  bottom: auto;
+  top: 50%;
+  translate: 0 -50%;
+}
+
 @media (max-width: 899px) {
-  /* Phones see a narrow slice of the fridge: labels sit beside each item (above the milk they
-     ended up under the nav) and the counter moves onto the shelf under the milk. */
-  .label {
+  .box[data-label="aboveDesktop"] .label {
     left: calc(100% + 6px);
     bottom: auto;
     top: 50%;
     translate: 0 -50%;
   }
 
+  /* Labels scale with the plate, and phones frame the fridge at ~1.45×: smaller type keeps the side
+     labels on screen and reads at about the desktop size. */
+  .label {
+    gap: 4px;
+    padding: 2px 7px;
+    font-size: 8px;
+  }
+
+  .check {
+    width: 11px;
+    height: 11px;
+    font-size: 7px;
+  }
+
+  /* Left of the milk: on the right it would sit under the milk's side label. */
   .counter {
-    left: 36%;
-    top: 46%;
+    left: 49%;
+    top: 60%;
+    padding: 4px 9px;
+    font-size: 9px;
   }
 }
 

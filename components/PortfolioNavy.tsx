@@ -591,7 +591,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
           }}
         >
           <div>
-            <h4 style={subHeader(c)}>{t(strings.sections.education)}</h4>
+            <h3 style={subHeader(c)}>{t(strings.sections.education)}</h3>
             <div style={{ padding: "20px 0", borderBottom: `1px solid ${c.line}` }}>
               <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 4 }}>
                 {t(strings.education.degreeTitle)}
@@ -623,7 +623,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
               </div>
             </div>
 
-            <h4 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.languages)}</h4>
+            <h3 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.languages)}</h3>
             {strings.languages.map((l, i) => (
               <div
                 key={i}
@@ -651,7 +651,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
           </div>
 
           <div>
-            <h4 style={subHeader(c)}>{t(strings.sections.stack)}</h4>
+            <h3 style={subHeader(c)}>{t(strings.sections.stack)}</h3>
             <div style={{ display: "grid", gap: 4 }}>
               {skills.map((s) => (
                 <div
@@ -680,7 +680,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
               ))}
             </div>
 
-            <h4 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.methodology)}</h4>
+            <h3 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.methodology)}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {t(strings.methodology).map((m) => (
                 <span
@@ -699,7 +699,7 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
               ))}
             </div>
 
-            <h4 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.tools)}</h4>
+            <h3 style={{ ...subHeader(c), marginTop: 40 }}>{t(strings.sections.tools)}</h3>
             <div
               style={{
                 display: "flex",

@@ -481,6 +481,46 @@
   .moreBody[data-open="false"] {
     display: none;
   }
+
+  /* Compact card so it fits under the scene while parked at the bottom of the screen. */
+  .cardTitle {
+    font-size: 40px;
+  }
+
+  .cardBody {
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .cardBody .summary {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* Summary trimmed to four lines until the details are opened. */
+  .cardBody:has(.moreBody[data-open="false"]) .summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 899px) {
+  .tagline {
+    margin: 8px 0 12px;
+    font-size: 19px;
+  }
+
+  /* "Visitar heladera-ec2b4.web.app ↗" wrapped to two lines; the domain and arrow say it alone. */
+  .visitVerb {
+    display: none;
+  }
+
+  .hour {
+    margin-bottom: 12px;
+  }
 }
 
 .headMeta {

@@ -12,8 +12,12 @@ type Pt = { x: number; y: number };
 type Shot = { f: Pt; t: Pt; s: number };
 type ProjectScene = "remy" | "heladera" | "withdrawal" | "jarvis" | "sleepsync";
 type Scene = "intro" | "work" | "walk" | ProjectScene;
-/** cover: never show the stage behind the plate · allowLeft: may slide right (close-ups) · free: no clamp. */
-type Edges = "cover" | "allowLeft" | "free";
+/**
+ * cover: never show the stage behind the plate · allowLeft: may slide right (desktop close-ups,
+ * the gap sits under the cards) · allowBottom: may slide up (phone close-ups, the gap sits under
+ * the parked card and the fade) · free: no clamp.
+ */
+type Edges = "cover" | "allowLeft" | "allowBottom" | "free";
 type SceneVars = React.CSSProperties & Record<`--${string}`, string | number>;
 
 type ShotName =
@@ -55,19 +59,23 @@ const DESKTOP: Shots = {
   bed: shot(0.45, 0.55, 0.62, 0.5, 1.1),
 };
 
-// On phones the scene lives in the top of the screen and the cards scroll below it.
+// On phones the scene lives in the top 64svh and the cards scroll below it. The nav covers the
+// frame's top ~13% and the fade into the cards starts around 80%, so subjects are aimed at ~45%
+// of the frame, and close-ups zoom past 1× so there's room to frame them vertically (at 1× the
+// plate is exactly as tall as the frame and can't move). Steam above the pan and the fridge's
+// shelves now sit in the clear band instead of under the fade.
 const MOBILE: Shots = {
   hero: shot(0.45, 0.55, 0.5, 0.5, 1),
   base: shot(0.42, 0.55, 0.5, 0.5, 1),
-  stove: shot(0.17, 0.6, 0.5, 0.5, 2.2),
-  stoveIn: shot(0.47, 0.64, 0.5, 0.5, 1.2),
-  stoveHold: shot(0.47, 0.64, 0.5, 0.5, 1),
-  fridge: shot(0.555, 0.6, 0.5, 0.5, 2),
-  fridgeIn: shot(0.48, 0.6, 0.5, 0.5, 1.2),
-  fridgeHold: shot(0.48, 0.6, 0.5, 0.5, 1),
+  stove: shot(0.17, 0.6, 0.5, 0.45, 2.4),
+  stoveIn: shot(0.47, 0.56, 0.5, 0.45, 1.45),
+  stoveHold: shot(0.47, 0.56, 0.5, 0.45, 1.3),
+  fridge: shot(0.555, 0.56, 0.5, 0.47, 2.1),
+  fridgeIn: shot(0.46, 0.66, 0.5, 0.47, 1.2),
+  fridgeHold: shot(0.46, 0.66, 0.5, 0.47, 1),
   door: shot(0.385, 0.5, 0.5, 0.5, 3.5),
-  deskBase: shot(0.5, 0.52, 0.5, 0.5, 1),
-  monitor: shot(0.497, 0.51, 0.5, 0.5, 1.8),
+  deskBase: shot(0.5, 0.5, 0.5, 0.47, 1.1),
+  monitor: shot(0.497, 0.51, 0.5, 0.47, 1.75),
   bed: shot(0.4, 0.6, 0.5, 0.5, 1),
 };
 
@@ -100,8 +108,8 @@ function place(el: HTMLElement, w: number, h: number, fw: number, fh: number, ca
     const maxX = (w * cam.s) / 2 - fw / 2; // left edge stays past the frame
     const minY = fh / 2 - (h * cam.s) / 2;
     const maxY = (h * cam.s) / 2 - fh / 2;
-    tx = edges === "cover" ? Math.min(maxX, Math.max(minX, tx)) : Math.max(minX, tx);
-    ty = Math.min(maxY, Math.max(minY, ty));
+    tx = edges === "allowLeft" ? Math.max(minX, tx) : Math.min(maxX, Math.max(minX, tx));
+    ty = edges === "allowBottom" ? Math.min(maxY, ty) : Math.min(maxY, Math.max(minY, ty));
   }
   el.style.transform = `translate(-50%, -50%) translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${cam.s.toFixed(4)})`;
   return { tx, ty };
@@ -216,7 +224,7 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       const V = window.innerHeight;
       const fw = frame.clientWidth;
       const fh = frame.clientHeight;
-      const close: Edges = desktop.matches ? "allowLeft" : "cover";
+      const close: Edges = desktop.matches ? "allowLeft" : "allowBottom";
 
       // Everything the frame shows; each scene below overrides what it needs.
       const st = {

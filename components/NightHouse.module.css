@@ -187,13 +187,14 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Phones: the frame covers the top 64svh; fade its bottom edge into the stage. */
+  /* Phones: the frame covers the top 64svh; fade only its bottom edge into the stage, short
+     enough to keep most of the frame clear. */
   background: linear-gradient(
     0deg,
     #0b0c0e 0%,
-    #0b0c0e 37%,
-    rgba(11, 12, 14, 0.6) 48%,
-    rgba(11, 12, 14, 0) 64%
+    #0b0c0e 36%,
+    rgba(11, 12, 14, 0.55) 42%,
+    rgba(11, 12, 14, 0) 52%
   );
 }
 
@@ -243,8 +244,18 @@
     padding-top: 48svh;
   }
 
+  /* Phones: the card parks at the bottom of the screen (above the design switcher) for most of
+     the scene, so zoom-in and hold play in the clear area above it; it only rides up during the
+     zoom-out. The lead is a ::before spacer, not padding: a sticky element can only move inside
+     its parent's content box. Opened details grow upward and scroll inside the card. */
   .segProject {
-    padding: 66svh 0 92svh;
+    padding: 0 0 10svh;
+  }
+
+  .segProject::before {
+    content: "";
+    display: block;
+    height: 170svh;
   }
 }
 
@@ -259,6 +270,18 @@
   backdrop-filter: blur(18px) saturate(1.15);
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
   color: var(--ink);
+}
+
+/* Must come after the base .card rule (same specificity): parked at the bottom on phones. */
+@media (max-width: 899px) {
+  .card {
+    position: sticky;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100svh - 84px - 76px);
+    padding: 18px 18px 20px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 /* ---------- ambient light on the wide shot ---------- */
@@ -514,6 +537,22 @@
   min-width: 1.4ch;
   color: #9ad3c4;
   font-weight: 500;
+}
+
+@media (max-width: 899px) {
+  /* Phones see a narrow slice of the fridge: labels sit beside each item (above the milk they
+     ended up under the nav) and the counter moves onto the shelf under the milk. */
+  .label {
+    left: calc(100% + 6px);
+    bottom: auto;
+    top: 50%;
+    translate: 0 -50%;
+  }
+
+  .counter {
+    left: 36%;
+    top: 46%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

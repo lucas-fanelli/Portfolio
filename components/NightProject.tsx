@@ -34,7 +34,8 @@ export function ProjectMeta({ proj, t }: { proj: Project; t: Translate }) {
       </span>
       {proj.url ? (
         <a className={s.visit} href={proj.url} target="_blank" rel="noopener noreferrer">
-          {t(strings.visit)} {proj.platform} ↗
+          <span className={s.visitVerb}>{t(strings.visit)} </span>
+          {proj.platform} ↗
         </a>
       ) : (
         <span className={s.platform}>{proj.platform}</span>

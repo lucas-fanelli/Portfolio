@@ -48,16 +48,22 @@ export default function PortfolioApp() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    let stored: Partial<Tweaks> = {};
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const stored = sanitize(JSON.parse(raw));
-        if (Object.keys(stored).length > 0) {
-          setTweaks((prev) => ({ ...prev, ...stored }));
-        }
-      }
+      if (raw) stored = sanitize(JSON.parse(raw));
     } catch {
       // localStorage unavailable or JSON malformed — fall back to defaults.
+    }
+    // Query params win over stored prefs, so a link like /?design=night&lang=es opens that view.
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = sanitize({
+      design: params.get("design") ?? undefined,
+      theme: params.get("theme") ?? undefined,
+      lang: params.get("lang") ?? undefined,
+    });
+    if (Object.keys(stored).length > 0 || Object.keys(fromUrl).length > 0) {
+      setTweaks((prev) => ({ ...prev, ...stored, ...fromUrl }));
     }
     setHydrated(true);
   }, []);

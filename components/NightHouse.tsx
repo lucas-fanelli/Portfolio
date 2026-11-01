@@ -168,6 +168,7 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
   const darkRef = useRef<HTMLDivElement>(null);
   const warmRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const segRefs = useRef<Partial<Record<Scene, HTMLElement | null>>>({});
 
   useEffect(() => {
@@ -183,13 +184,33 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
     const end = endRef.current;
     if (!frame || !kitchen || !stove || !fridge || !desk || !bed || !screen || !dark || !warm || !end) return;
 
+    const track = trackRef.current;
+    if (!track) return;
+
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     const desktop = window.matchMedia("(min-width: 900px)");
     let raf = 0;
     let screenBase = { w: 0, h: 0 };
 
-    const update = () => {
-      raf = 0;
+    // Segment positions in page coordinates, re-measured whenever the track's layout changes
+    // (resize, fonts, a card's details opening on mobile) instead of on every frame.
+    let segs: { id: Scene; top: number; height: number }[] = [];
+    const measure = () => {
+      segs = ORDER.flatMap((id) => {
+        const el = segRefs.current[id];
+        if (!el) return [];
+        const r = el.getBoundingClientRect();
+        return [{ id, top: r.top + window.scrollY, height: r.height }];
+      });
+    };
+
+    // The camera follows a damped copy of the scroll position, so wheel notches and
+    // trackpad flicks become one continuous move instead of a series of jumps.
+    let smoothY = window.scrollY;
+    let last = 0;
+    let prev = { layer: "", s: 1 };
+
+    const render = (Y: number, dt: number) => {
       const base = desktop.matches ? DESKTOP : MOBILE;
       const S = reduce.matches ? still(base) : base;
       const V = window.innerHeight;
@@ -211,24 +232,20 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
         blur: 0,
       };
 
-      const active = ORDER.find((id) => {
-        const r = segRefs.current[id]?.getBoundingClientRect();
-        return r && r.top <= 0 && r.bottom > 0;
-      });
+      const seg = segs.find((sg) => Y >= sg.top && Y < sg.top + sg.height);
+      const active = seg?.id;
 
-      if (!active) {
+      if (!seg || !active) {
         // Past the house: hold the last frame (the bed at first light).
-        const first = segRefs.current.intro?.getBoundingClientRect();
-        if (first && first.top <= 0) {
+        if (segs.length > 0 && Y >= segs[0].top) {
           st.kitchen.o = 0;
           st.bed.o = 1;
           st.warm = 0.5;
           st.end = 1;
         }
       } else {
-        const r = segRefs.current[active]!.getBoundingClientRect();
-        const y = -r.top;
-        const len = r.height;
+        const y = Y - seg.top;
+        const len = seg.height;
         const p = clamp01(y / len);
         // Shared rhythm for project scenes: zoom in over ~¾ screen, hold while the card scrolls, zoom out.
         const zIn = ease(clamp01(y / (0.75 * V)));
@@ -323,7 +340,15 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       show(desk, st.desk.o);
       if (st.bed.o > 0) place(bed, bed.offsetWidth, bed.offsetHeight, fw, fh, st.bed.cam, st.bed.edges);
       show(bed, st.bed.o);
-      frame.style.filter = st.blur > 0.2 ? `blur(${st.blur.toFixed(1)}px)` : "";
+
+      // A touch of motion blur while the camera zooms fast (desktop only; filters are costly on phones).
+      const lead = st.kitchen.o > 0.5 ? "kitchen" : st.desk.o > 0.5 ? "desk" : "bed";
+      const leadS = st[lead].cam.s;
+      const zoomSpeed = prev.layer === lead && dt > 0 ? Math.abs(leadS - prev.s) / dt : 0;
+      prev = { layer: lead, s: leadS };
+      const motion = desktop.matches && !reduce.matches ? Math.min(2, zoomSpeed * 0.5) : 0;
+      const blur = Math.max(st.blur, motion);
+      frame.style.filter = blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "";
 
       // The screen is real DOM laid over the monitor, sized for its closest framing so it stays sharp
       // and only ever scales down.
@@ -348,21 +373,49 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
       end.style.opacity = st.end.toFixed(3);
     };
 
-    const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(update);
+    const step = (now: number) => {
+      raf = 0;
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
+      last = now;
+      const target = window.scrollY;
+      // Snap on reduced motion and on long jumps (nav links, restored scroll) so the camera
+      // doesn't fly through every room on the way. A snap isn't motion: no blur for it.
+      if (reduce.matches || Math.abs(target - smoothY) > 2 * window.innerHeight) {
+        smoothY = target;
+        prev = { layer: "", s: 1 };
+      } else {
+        smoothY += (target - smoothY) * (1 - Math.exp(-dt * 9));
+      }
+      if (Math.abs(target - smoothY) < 0.5) smoothY = target;
+      render(smoothY, dt);
+      // Keep going until the camera has arrived and its motion blur has cleared.
+      if (smoothY !== target || frame.style.filter !== "") raf = requestAnimationFrame(step);
+      else last = 0;
     };
 
-    update();
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(step);
+    };
+    const remeasure = () => {
+      measure();
+      schedule();
+    };
+
+    measure();
+    render(smoothY, 0);
+    const ro = new ResizeObserver(remeasure);
+    ro.observe(track);
     window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
+    window.addEventListener("resize", remeasure);
     reduce.addEventListener("change", schedule);
-    desktop.addEventListener("change", schedule);
+    desktop.addEventListener("change", remeasure);
     return () => {
       cancelAnimationFrame(raf);
+      ro.disconnect();
       window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
+      window.removeEventListener("resize", remeasure);
       reduce.removeEventListener("change", schedule);
-      desktop.removeEventListener("change", schedule);
+      desktop.removeEventListener("change", remeasure);
     };
   }, []);
 
@@ -406,7 +459,7 @@ export default function NightHouse({ t, intro, workIntro }: Props) {
         <div ref={endRef} className={h.endFade} />
       </div>
 
-      <div className={h.track}>
+      <div ref={trackRef} className={h.track}>
         <div ref={seg("intro")} className={h.segIntro} data-hour="20:00" data-tone="dark">
           {intro}
         </div>

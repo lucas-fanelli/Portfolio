@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DesignId } from "@/lib/content";
 import { useViewport } from "@/lib/useViewport";
 
@@ -29,10 +29,23 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
     width: 0,
   });
   const [measured, setMeasured] = useState(false);
+  // Stay hidden until the web fonts have loaded: the pill is centred, so a font swap changes its
+  // width and position — Lighthouse counted that as layout shift. Hidden elements don't shift.
+  const [fontsReady, setFontsReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    document.fonts.ready.then(() => {
+      if (alive) setFontsReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Position the dark "active" pill behind the selected option. Re-measure when
-  // value changes (animates), when the viewport resizes (labels may rewrap), or
-  // on first mount (initial placement).
+  // value changes (animates), when the viewport resizes (labels may rewrap), on
+  // first mount (initial placement), and once the real fonts set the label widths.
   useLayoutEffect(() => {
     const btn = btnRefs.current[value];
     const container = containerRef.current;
@@ -41,7 +54,7 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
     const bRect = btn.getBoundingClientRect();
     setIndicator({ left: bRect.left - cRect.left, width: bRect.width });
     setMeasured(true);
-  }, [value, width]);
+  }, [value, width, fontsReady]);
 
   return (
     <div
@@ -63,7 +76,9 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
         borderRadius: 999,
         boxShadow: "0 10px 30px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)",
         fontFamily: 'var(--font-inter), "Inter", system-ui, sans-serif',
-        transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+        visibility: fontsReady ? "visible" : "hidden",
+        opacity: fontsReady ? 1 : 0,
+        transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease",
       }}
     >
       {/* Sliding dark indicator */}
@@ -114,6 +129,11 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
           >
             <span
               style={{
+                // Fixed box so the pill's width (and centred position) doesn't change when the
+                // web fonts swap in — that swap was a measurable layout shift.
+                display: "inline-block",
+                width: 16,
+                textAlign: "center",
                 fontFamily:
                   opt.id === "terminal"
                     ? 'var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace'

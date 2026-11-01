@@ -197,27 +197,6 @@
 
 /* ---------- shared scene pieces ---------- */
 
-.plate {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-}
-
-.plateImg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.shade {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
 .hour {
   display: flex;
   align-items: center;
@@ -417,11 +396,6 @@
 }
 
 /* ---------- project cards ---------- */
-
-.headContent {
-  position: relative;
-  z-index: 1;
-}
 
 .tagline {
   margin: 18px 0 26px;
@@ -747,21 +721,15 @@
   color: var(--ink);
 }
 
-.dawnHead {
-  position: relative;
-  isolation: isolate;
-  min-height: 86svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 120px var(--gutter) clamp(40px, 6vh, 72px);
-}
+/* The About heading at the end of the house (NightHouse's dawn segment): it sits over the bottom of
+   the stage, which has melted into the dawn section's cream by then, so it takes the dawn palette.
+   Jumping to #about lands it near the bottom of the screen, over the cream, not under the nav. */
+.dawnIntro {
+  --ink: #1f1b17;
+  --accent: #9a4421;
 
-.dawnHead .shade {
-  /* Enters from the last night chapter's blue (SleepSync, #070b17) instead of cutting to light. */
-  background:
-    linear-gradient(180deg, #070b17 0%, rgba(7, 11, 23, 0.55) 18%, transparent 42%),
-    linear-gradient(0deg, var(--bg) 3%, color-mix(in srgb, var(--bg) 45%, transparent) 42%, transparent 74%);
+  color: var(--ink);
+  scroll-margin-top: 55svh;
 }
 
 .dawnTitle {
@@ -955,26 +923,6 @@
 .root[data-motion="on"] [data-reveal=""] {
   opacity: 0;
   transform: translateY(18px);
-}
-
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .plateImg {
-      scale: 1.14;
-      animation: drift linear both;
-      animation-timeline: view();
-      animation-range: cover 0% cover 100%;
-    }
-  }
-}
-
-@keyframes drift {
-  from {
-    transform: translateY(-6%);
-  }
-  to {
-    transform: translateY(6%);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

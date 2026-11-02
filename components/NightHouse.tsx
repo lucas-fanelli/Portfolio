@@ -108,6 +108,44 @@ const CLIPS: Partial<Record<Scene, string>> = {
 };
 const CLIP_FPS = 60;
 
+// How much scroll each camera move takes, in screen heights. The renderer and the camera's speed
+// limit (see `moves`) both read these, so they agree on where the camera is travelling.
+const ZOOM_IN = 0.75;
+const ZOOM_OUT_AT = 0.95; // the zoom-out starts this far before its segment ends…
+const ZOOM_OUT = 0.8; // …and takes this long
+const GAME_IN_AT = 0.3; // Withdrawal's zoom waits for the desk to fade in from the hallway
+const TURN = 0.7;
+const DAWN = 0.9;
+
+// On touch screens a flick scrolls through a whole scene in a fraction of a second, so the camera
+// jumped from still to still with the clip in between reduced to a few frames. While it travels it
+// is held to MOVE_SPEED (screens per second), so a zoom takes at least about a second however fast
+// the page scrolls; the limit rises once it falls more than CATCH_UP screens behind, so a long fling
+// isn't followed by a slow tour of every room. Desktop wheels never get fast enough to need it.
+const MOVE_SPEED = 0.7;
+const CATCH_UP = 1.5;
+
+/** Where in a segment the camera travels between stills, as [from, to] scroll offsets. */
+function moves(id: Scene, len: number, V: number): [number, number][] {
+  const zoomOut: [number, number] = [len - ZOOM_OUT_AT * V, len - (ZOOM_OUT_AT - ZOOM_OUT) * V];
+  switch (id) {
+    case "remy":
+    case "heladera":
+    case "jarvis":
+      return [[0, ZOOM_IN * V], zoomOut];
+    case "withdrawal":
+      return [[0, (GAME_IN_AT + ZOOM_IN) * V], zoomOut];
+    case "walk":
+      return [[0, len - V]];
+    case "sleepsync":
+      return [[0, TURN * V]];
+    case "dawn":
+      return [[0, DAWN * V]];
+    default:
+      return [];
+  }
+}
+
 // With reduced motion the camera never zooms; scenes only cross-fade.
 const still = (set: Shots): Shots =>
   Object.fromEntries(Object.entries(set).map(([k, v]) => [k, { ...v, s: 1 }])) as Shots;
@@ -312,6 +350,8 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     // Segment positions in page coordinates, re-measured whenever the track's layout changes
     // (resize, fonts, a card's details opening on mobile) instead of on every frame.
     let segs: { id: Scene; top: number; height: number }[] = [];
+    // The camera moves in page coordinates, for the speed limit.
+    let spans: [number, number][] = [];
     const measure = () => {
       segs = ORDER.flatMap((id) => {
         const el = segRefs.current[id];
@@ -319,12 +359,28 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
         const r = el.getBoundingClientRect();
         return [{ id, top: r.top + window.scrollY, height: r.height }];
       });
+      const V = stage.clientHeight;
+      spans = segs.flatMap((sg) => moves(sg.id, sg.height, V).map(([a, b]): [number, number] => [sg.top + a, sg.top + b]));
     };
 
     // The camera follows a damped copy of the scroll position, so wheel notches and
     // trackpad flicks become one continuous move instead of a series of jumps.
     let smoothY = window.scrollY;
+    let lastTarget = smoothY;
     let last = 0;
+    const touch = window.matchMedia("(pointer: coarse)");
+    // A nav link scrolls smoothly across the whole house; the camera snaps along with it.
+    let jumping = false;
+    let jumpTimer = 0;
+    const endJumpIn = (ms: number) => {
+      window.clearTimeout(jumpTimer);
+      jumpTimer = window.setTimeout(() => (jumping = false), ms);
+    };
+    const onClick = (e: MouseEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('a[href^="#"]')) return;
+      jumping = true;
+      endJumpIn(400);
+    };
 
     const render = (Y: number) => {
       const base = desktop.matches ? DESKTOP : MOBILE;
@@ -381,9 +437,9 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
         const len = seg.height;
         const p = clamp01(y / len);
         // Shared rhythm for project scenes: zoom in over ~¾ screen, hold while the card scrolls, zoom out.
-        const zIn = ease(clamp01(y / (0.75 * V)));
-        const zOut = ease(clamp01((y - (len - 0.95 * V)) / (0.8 * V)));
-        const hold = clamp01((y - 0.75 * V) / Math.max(1, len - 1.7 * V));
+        const zIn = ease(clamp01(y / (ZOOM_IN * V)));
+        const zOut = ease(clamp01((y - (len - ZOOM_OUT_AT * V)) / (ZOOM_OUT * V)));
+        const hold = clamp01((y - ZOOM_IN * V) / Math.max(1, len - (ZOOM_IN + ZOOM_OUT_AT) * V));
 
         switch (active) {
           case "intro":
@@ -448,7 +504,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
             // way out ("the PC dims, we stay in the room").
             const isGame = active === "withdrawal";
             const fadeIn = isGame && !readyClip("walk") ? ease(clamp01(y / (0.45 * V))) : 1;
-            const zi = isGame ? ease(clamp01((y - 0.3 * V) / (0.75 * V))) : zIn;
+            const zi = isGame ? ease(clamp01((y - GAME_IN_AT * V) / (ZOOM_IN * V))) : zIn;
             const z = zi * (1 - zOut);
             st.kitchen.o = 0;
             st.desk = { cam: mix(S.deskBase, S.monitor, z), o: 1, edges: "cover" };
@@ -466,7 +522,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
             break;
           }
           case "sleepsync": {
-            const turn = ease(clamp01(y / (0.7 * V)));
+            const turn = ease(clamp01(y / (TURN * V)));
             st.kitchen.o = 0;
             const clip = readyClip("sleepsync");
             if (clip) {
@@ -494,7 +550,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
           case "dawn": {
             // 06:00: the camera stays on the bed while the time-lapse turns the night into sunrise, then
             // the bottom of the frame melts into the cream of the About section under the heading.
-            const d = ease(clamp01(y / (0.9 * V)));
+            const d = ease(clamp01(y / (DAWN * V)));
             st.kitchen.o = 0;
             const clip = readyClip("dawn");
             if (clip) {
@@ -513,7 +569,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
             st.scrim = 1 - d;
             // The melt into cream finishes before the stage starts scrolling away (the last screen of the
             // segment), so its bottom edge is already the About section's colour when it leaves.
-            st.end = ease(clamp01((y - 0.9 * V) / Math.max(1, len - 1.9 * V)));
+            st.end = ease(clamp01((y - DAWN * V) / Math.max(1, len - (DAWN + 1) * V)));
             break;
           }
         }
@@ -590,18 +646,43 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       end.style.opacity = st.end.toFixed(3);
     };
 
+    // Touch screens only: inside a camera move, a step is held to the speed limit; on the way to the
+    // next move it stops at its start, so no move is entered at full speed.
+    const limit = (y: number, d: number, gap: number, dt: number, V: number) => {
+      const down = d > 0;
+      if (spans.some(([a, b]) => (down ? y >= a && y < b : y > a && y <= b))) {
+        const max = MOVE_SPEED * V * Math.max(1, Math.abs(gap) / (CATCH_UP * V)) * dt;
+        return Math.max(-max, Math.min(max, d));
+      }
+      for (const [a, b] of spans) {
+        if (down && y < a && y + d > a) d = a - y;
+        if (!down && y > b && y + d < b) d = b - y;
+      }
+      return d;
+    };
+
     const step = (now: number) => {
       raf = 0;
       const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
       last = now;
       const target = window.scrollY;
-      // Snap on reduced motion and on long jumps (nav links, restored scroll) so the camera
-      // doesn't fly through every room on the way.
-      if (reduce.matches || Math.abs(target - smoothY) > 2 * window.innerHeight) {
+      const V = stage.clientHeight;
+      const gap = target - smoothY;
+      // Snap on reduced motion, while a nav link scrolls the page, and on instant jumps (restored
+      // scroll) so the camera doesn't fly through every room on the way. Without the touch speed
+      // limit the camera never falls 2 screens behind on its own, so on desktop that's a jump too.
+      if (
+        reduce.matches ||
+        jumping ||
+        Math.abs(target - lastTarget) > 1.5 * V ||
+        (!touch.matches && Math.abs(gap) > 2 * V)
+      ) {
         smoothY = target;
       } else {
-        smoothY += (target - smoothY) * (1 - Math.exp(-dt * 9));
+        const d = gap * (1 - Math.exp(-dt * 9));
+        smoothY += touch.matches ? limit(smoothY, d, gap, dt, V) : d;
       }
+      lastTarget = target;
       if (Math.abs(target - smoothY) < 0.5) smoothY = target;
       render(smoothY);
       // Keep going until the camera has arrived.
@@ -611,6 +692,11 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(step);
+    };
+    const onScroll = () => {
+      // The nav jump is over once the smooth scroll stops.
+      if (jumping) endJumpIn(200);
+      schedule();
     };
     const remeasure = () => {
       measure();
@@ -623,15 +709,18 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     ro.observe(track);
     const videos = Object.values(clipRefs.current).filter((v): v is HTMLVideoElement => !!v);
     for (const v of videos) v.addEventListener("seeked", schedule);
-    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", remeasure);
+    document.addEventListener("click", onClick);
     reduce.addEventListener("change", schedule);
     desktop.addEventListener("change", remeasure);
     return () => {
       cancelAnimationFrame(raf);
+      window.clearTimeout(jumpTimer);
       ro.disconnect();
       for (const v of videos) v.removeEventListener("seeked", schedule);
-      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick);
       window.removeEventListener("resize", remeasure);
       reduce.removeEventListener("change", schedule);
       desktop.removeEventListener("change", remeasure);

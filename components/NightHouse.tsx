@@ -126,13 +126,6 @@ const DAWN = 0.9;
 const MIN_MOVE = 0.75;
 const FAST_MOVE = 0.15;
 const CATCH_UP = 1.5;
-// A take only shows the frames it has decoded, and a phone needs several screen frames per seek: a
-// camera that outran it skipped most of the take, which is what still looked like a jump on phones.
-// Inside a take's move the camera stays within 1/FRAMES_PER_MOVE of the move of the frame last asked
-// for, so any move shows at least that many frames however slow the decoder; a seek that hangs for
-// SEEK_GIVE_UP ms stops holding it back. Desktop decoders keep up and never feel it.
-const FRAMES_PER_MOVE = 16;
-const SEEK_GIVE_UP = 250;
 
 /** Where in a segment the camera travels between stills, as [from, to] scroll offsets. */
 function moves(id: Scene, len: number, V: number): [number, number][] {
@@ -380,9 +373,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     let smoothY = window.scrollY;
     let lastTarget = smoothY;
     let last = 0;
-    // The take move on screen ([a, b] in page coordinates) and the camera position its last seek asked
-    // for, at `time` (see FRAMES_PER_MOVE).
-    let seekLock: { a: number; b: number; y: number; time: number } | null = null;
     // A nav link scrolls smoothly across the whole house; the camera snaps along with it.
     let jumping = false;
     let jumpTimer = 0;
@@ -437,8 +427,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       const seg = segs.find((sg) => Y >= sg.top && Y < sg.top + sg.height);
       const active = seg?.id;
-      // The camera move Y is in, in page coordinates, for the seek lock.
-      const move = seg && moves(seg.id, seg.height, V).find(([a, b]) => Y - seg.top >= a && Y - seg.top <= b);
 
       if (!seg || !active) {
         // Past the house: hold the last frame (the bedroom at dawn, melted into cream at the bottom).
@@ -598,8 +586,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       place(kitchen, kitchen.offsetWidth, kitchen.offsetHeight, fw, fh, st.kitchen.cam, "cover");
       show(kitchen, st.kitchen.o);
-      const moveA = seg && move ? seg.top + move[0] : NaN;
-      if (!st.clip || st.clip.o <= 0 || !move || seekLock?.a !== moveA) seekLock = null;
       for (const [scene, video] of Object.entries(clipRefs.current) as [Scene, HTMLVideoElement | null][]) {
         const layer = clipLayerRefs.current[scene];
         if (!video || !layer) continue;
@@ -614,10 +600,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
           apply(layer, lerp(a.tx, b.tx, c.lift), lerp(a.ty, b.ty, c.lift), c.cam.s);
           // One seek at a time: a new seek cancels the pending one before its frame is painted, so on
           // fast screens most frames were skipped. The `seeked` listener re-renders to catch up.
-          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) {
-            video.currentTime = c.t;
-            if (seg && move) seekLock = { a: moveA, b: seg.top + move[1], y: Y, time: performance.now() };
-          }
+          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) video.currentTime = c.t;
         }
         show(layer, c ? c.o : 0);
       }
@@ -697,13 +680,9 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
         smoothY = target;
       } else {
         const d = gap * (1 - Math.exp(-dt * 9));
-        let next = smoothY + limit(smoothY, d, gap, dt, V);
-        const lock = seekLock;
-        if (lock && now - lock.time < SEEK_GIVE_UP && next >= lock.a && next <= lock.b) {
-          const lead = (lock.b - lock.a) / FRAMES_PER_MOVE;
-          next = Math.max(lock.y - lead, Math.min(lock.y + lead, next));
-        }
-        smoothY = next;
+        // No waiting for the take's decoder here: tying the camera to it on phones (60-120 ms a
+        // seek) turned every move into stop-and-go hops and left the camera seconds behind the page.
+        smoothY += limit(smoothY, d, gap, dt, V);
       }
       lastTarget = target;
       if (Math.abs(target - smoothY) < 0.5) smoothY = target;

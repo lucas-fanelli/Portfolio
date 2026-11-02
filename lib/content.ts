@@ -55,6 +55,7 @@ export type Strings = {
     about: Localized;
     contact: Localized;
     lang: Localized;
+    menu: Localized;
   };
   hero: {
     role: Localized;
@@ -73,6 +74,9 @@ export type Strings = {
     languages: Localized;
     contact: Localized;
     contactNote: Localized;
+    copyEmail: Localized;
+    copied: Localized;
+    copyFailed: Localized;
     philosophy: Localized;
     quality: Localized;
     tools: Localized;
@@ -132,6 +136,7 @@ export const strings: Strings = {
     about: { es: "Sobre mí", en: "About" },
     contact: { es: "Contacto", en: "Contact" },
     lang: { es: "EN", en: "ES" },
+    menu: { es: "Menú", en: "Menu" },
   },
   hero: {
     role: {
@@ -165,6 +170,9 @@ export const strings: Strings = {
       es: "La mejor vía es por email. Respondo en ES o EN.",
       en: "Email is the fastest route. Happy to reply in EN or ES.",
     },
+    copyEmail: { es: "Copiar email", en: "Copy email" },
+    copied: { es: "Copiado", en: "Copied" },
+    copyFailed: { es: "No se pudo copiar: selecciona el email", en: "Couldn't copy: select the address" },
     philosophy: { es: "Filosofía", en: "Philosophy" },
     quality: { es: "Estándares de calidad", en: "Quality standards" },
     tools: { es: "Herramientas", en: "Tools" },

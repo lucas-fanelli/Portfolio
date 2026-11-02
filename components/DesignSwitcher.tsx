@@ -43,6 +43,41 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
     };
   }, []);
 
+  // A design can mark text the pill must not sit on (data-switcher-avoid, e.g. the One Night hero on
+  // a phone or a short laptop screen): the pill fades out while it overlaps that text and comes back
+  // once the visitor scrolls past it. It never hides while it holds keyboard focus.
+  const [covering, setCovering] = useState(false);
+  useEffect(() => {
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const box = containerRef.current;
+      if (!box) return;
+      if (box.contains(document.activeElement)) {
+        setCovering(false);
+        return;
+      }
+      const b = box.getBoundingClientRect();
+      const hit = Array.from(document.querySelectorAll("[data-switcher-avoid]")).some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > b.top && r.top < b.bottom && r.right > b.left && r.left < b.right;
+      });
+      setCovering(hit);
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(check);
+    };
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [value, fontsReady]);
+  const shown = fontsReady && !covering;
+
   // Position the dark "active" pill behind the selected option. Re-measure when
   // value changes (animates), when the viewport resizes (labels may rewrap), on
   // first mount (initial placement), and once the real fonts set the label widths.
@@ -59,6 +94,8 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
   return (
     <div
       ref={containerRef}
+      role="group"
+      aria-label="Design"
       style={{
         position: "fixed",
         bottom: isMobile ? 24 : 16,
@@ -76,9 +113,11 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
         borderRadius: 999,
         boxShadow: "0 10px 30px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)",
         fontFamily: 'var(--font-inter), "Inter", system-ui, sans-serif',
-        visibility: fontsReady ? "visible" : "hidden",
-        opacity: fontsReady ? 1 : 0,
-        transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease",
+        // visibility flips after the fade-out (and before the fade-in), so a hidden pill can't be
+        // clicked or tabbed into.
+        visibility: shown ? "visible" : "hidden",
+        opacity: shown ? 1 : 0,
+        transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, visibility 0.4s",
       }}
     >
       {/* Sliding dark indicator */}
@@ -108,6 +147,7 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
               btnRefs.current[opt.id] = el;
             }}
             onClick={() => onChange(opt.id)}
+            aria-pressed={active}
             style={{
               position: "relative",
               zIndex: 1,
@@ -115,6 +155,8 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
               alignItems: "center",
               gap: 6,
               padding: "7px 13px",
+              // Finger-sized on phones (44px, Apple's minimum); the mouse-sized pill stays on desktop.
+              minHeight: isMobile ? 44 : undefined,
               borderRadius: 999,
               border: 0,
               background: "transparent",
@@ -160,8 +202,8 @@ export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props)
         style={{
           position: "relative",
           zIndex: 1,
-          width: 30,
-          height: 30,
+          width: isMobile ? 44 : 30,
+          height: isMobile ? 44 : 30,
           borderRadius: "50%",
           border: 0,
           background: "transparent",

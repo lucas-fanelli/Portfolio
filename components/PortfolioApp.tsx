@@ -68,6 +68,17 @@ export default function PortfolioApp() {
     setHydrated(true);
   }, []);
 
+  // The visitor's own design is on screen now, so the boot script's cover (layout.tsx) can go.
+  useEffect(() => {
+    if (hydrated) delete document.documentElement.dataset.boot;
+  }, [hydrated]);
+
+  // Screen readers pick their pronunciation (and search engines the language) from <html lang>.
+  // (Before hydration the boot script has already set it from the same sources.)
+  useEffect(() => {
+    if (hydrated) document.documentElement.lang = tweaks.lang;
+  }, [tweaks.lang, hydrated]);
+
   useEffect(() => {
     if (!hydrated) return;
     try {

@@ -270,7 +270,20 @@
 }
 
 .segProject {
+  position: relative;
   padding: 82vh 0 96vh;
+}
+
+/* A chapter link's landing point (ProjectCard): far enough in for the zoom to have finished, early
+   enough that the card's title is still below the nav. On phones the card is parked at the bottom
+   by then; Withdrawal's zoom starts later (GAME_IN_AT), so it lands later. */
+.anchor {
+  position: absolute;
+  top: 72svh;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
 /* The walk crosses two rooms, so it gets a full screen of scroll instead of the usual ¾. */
@@ -305,6 +318,14 @@
     content: "";
     display: block;
     height: 170svh;
+  }
+
+  .anchor {
+    top: 85svh;
+  }
+
+  .anchor[data-scene="withdrawal"] {
+    top: 110svh;
   }
 }
 

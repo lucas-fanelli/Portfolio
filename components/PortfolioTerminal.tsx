@@ -14,6 +14,7 @@ import {
   type ProjectStatus,
   type Theme,
 } from "@/lib/content";
+import { BACKGROUNDS } from "@/lib/designs";
 import { useViewport } from "@/lib/useViewport";
 
 type Palette = {
@@ -33,7 +34,7 @@ type Palette = {
 
 const palettes: Record<Theme, Palette> = {
   dark: {
-    bg: "#0b0e0a",
+    bg: BACKGROUNDS.terminal.dark,
     panel: "#0f1410",
     ink: "#cfe9c4",
     muted: "#5d7c54",
@@ -47,7 +48,7 @@ const palettes: Record<Theme, Palette> = {
     promptHost: "#7ad9ff",
   },
   light: {
-    bg: "#f3efe3",
+    bg: BACKGROUNDS.terminal.light,
     panel: "#ece6d4",
     ink: "#2c2a22",
     muted: "#6a6457",
@@ -61,7 +62,7 @@ const palettes: Record<Theme, Palette> = {
     promptHost: "#1c5b88",
   },
   navy: {
-    bg: "#0a1a30",
+    bg: BACKGROUNDS.terminal.navy,
     panel: "#0e2240",
     ink: "#d9e6ff",
     muted: "#7e96bd",

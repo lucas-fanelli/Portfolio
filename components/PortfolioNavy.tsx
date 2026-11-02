@@ -15,6 +15,7 @@ import {
   type ProjectStatus,
   type Theme,
 } from "@/lib/content";
+import { BACKGROUNDS } from "@/lib/designs";
 import { useViewport } from "@/lib/useViewport";
 
 type NavyTheme = "light" | "dark" | "navy";
@@ -35,7 +36,7 @@ type Palette = {
 
 const palettes: Record<NavyTheme, Palette> = {
   light: {
-    bg: "#f7f6f3",
+    bg: BACKGROUNDS.navy.light,
     surface: "#ffffff",
     ink: "#1a1f2c",
     muted: "#5b6478",
@@ -48,7 +49,7 @@ const palettes: Record<NavyTheme, Palette> = {
     codeInk: "#dbe2f1",
   },
   dark: {
-    bg: "#0d1117",
+    bg: BACKGROUNDS.navy.dark,
     surface: "#161b22",
     ink: "#e6edf3",
     muted: "#8b95a7",
@@ -61,7 +62,7 @@ const palettes: Record<NavyTheme, Palette> = {
     codeInk: "#d1d9e0",
   },
   navy: {
-    bg: "#1a2c4a",
+    bg: BACKGROUNDS.navy.navy,
     surface: "#22375a",
     ink: "#f3ecd9",
     muted: "#b6c2d8",
@@ -602,11 +603,11 @@ export default function PortfolioNavy({ theme, lang, setTheme, setLang }: Props)
               <div style={{ display: "flex", gap: 32, fontSize: 13 }}>
                 <div>
                   <span style={metaDt(c)}>{t(strings.education.gpa)}</span>{" "}
-                  <strong style={{ color: c.accent, fontSize: 17 }}>{academics.gpa}</strong>
+                  <strong style={{ color: c.accent, fontSize: 17 }}>{t(academics.gpa)}</strong>
                 </div>
                 <div>
                   <span style={metaDt(c)}>{t(strings.education.access)}</span>{" "}
-                  <strong style={{ color: c.accent, fontSize: 17 }}>{academics.access}</strong>
+                  <strong style={{ color: c.accent, fontSize: 17 }}>{t(academics.access)}</strong>
                 </div>
               </div>
               <div style={{ marginTop: 14, fontSize: 13, color: c.muted }}>

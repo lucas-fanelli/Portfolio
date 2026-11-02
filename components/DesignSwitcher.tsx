@@ -10,10 +10,11 @@ type Props = {
   onOpenTweaks: () => void;
 };
 
+// One Night, the default, comes first.
 const OPTIONS: { id: DesignId; label: string; icon: string }[] = [
+  { id: "night", label: "Night", icon: "☾" },
   { id: "navy", label: "Minimal", icon: "▦" },
   { id: "terminal", label: "Terminal", icon: "$_" },
-  { id: "night", label: "Night", icon: "☾" },
 ];
 
 export default function DesignSwitcher({ value, onChange, onOpenTweaks }: Props) {

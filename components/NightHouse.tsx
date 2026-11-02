@@ -231,6 +231,9 @@ const HOUSE_PROJECTS: { scene: ProjectScene; project: Project; hour: string; var
 
 const ORDER: Scene[] = ["intro", "work", "remy", "heladera", "walk", "withdrawal", "jarvis", "sleepsync", "dawn"];
 
+/** The projects in the order the night visits them, for the chapter menu and the project list. */
+export const HOUSE_CHAPTERS = HOUSE_PROJECTS.map(({ project, hour }) => ({ project, hour }));
+
 type Props = {
   t: Translate;
   /** The 20:00 opening (name, photo, intro) laid over the wide kitchen shot. */
@@ -796,20 +799,35 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       </div>
 
       <div ref={trackRef} className={h.track}>
-        <div ref={seg("intro")} className={h.segIntro} data-hour="20:00" data-tone="dark">
+        {/* data-chapter: the chapter menu entry each part of the night belongs to. */}
+        <div ref={seg("intro")} className={h.segIntro} data-hour="20:00" data-tone="dark" data-chapter="top">
           {intro}
         </div>
-        <div ref={seg("work")} id="work" className={h.segWork} data-hour="20:00" data-tone="dark">
+        <div ref={seg("work")} id="work" className={h.segWork} data-hour="20:00" data-tone="dark" data-chapter="top">
           {workIntro}
         </div>
         {HOUSE_PROJECTS.slice(0, 2).map((p) => (
           <ProjectCard key={p.scene} {...p} t={t} segRef={seg(p.scene)} />
         ))}
-        <div ref={seg("walk")} className={h.segWalk} data-scene="walk" data-hour="00:00" data-tone="dark" />
+        <div
+          ref={seg("walk")}
+          className={h.segWalk}
+          data-scene="walk"
+          data-hour="00:00"
+          data-tone="dark"
+          data-chapter="heladera"
+        />
         {HOUSE_PROJECTS.slice(2).map((p) => (
           <ProjectCard key={p.scene} {...p} t={t} segRef={seg(p.scene)} />
         ))}
-        <div ref={seg("dawn")} className={h.segDawn} data-scene="dawn" data-hour="06:00" data-tone="light">
+        <div
+          ref={seg("dawn")}
+          className={h.segDawn}
+          data-scene="dawn"
+          data-hour="06:00"
+          data-tone="light"
+          data-chapter="about"
+        >
           {dawnIntro}
         </div>
       </div>
@@ -848,7 +866,10 @@ function ProjectCard({
       data-scene={scene}
       data-hour={hour}
       data-tone="dark"
+      data-chapter={proj.id}
     >
+      {/* Where a link to this chapter lands: the camera has arrived and the card is in view. */}
+      <span id={proj.id} className={h.anchor} data-scene={scene} />
       <div className={h.card} style={vars}>
         <p className={ns.hour} data-reveal="">
           {hour} — {t(strings.night.hours[scene])}

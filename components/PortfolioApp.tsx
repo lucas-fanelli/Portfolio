@@ -7,13 +7,18 @@ import PortfolioNight from "./PortfolioNight";
 import PortfolioTerminal from "./PortfolioTerminal";
 import TweaksPanel, { type Tweaks } from "./TweaksPanel";
 import type { DesignId, Lang, Theme } from "@/lib/content";
+import { backgroundFor } from "@/lib/designs";
+import { PATHS } from "@/lib/seo";
 
-const STORAGE_KEY = "portfolio-tweaks";
+// Only what the visitor picked is saved, so a default can still change for them later. The first
+// version ("portfolio-tweaks") saved the defaults too, which would have pinned every past visitor to
+// the old default design; it's dropped on the next visit.
+const STORAGE_KEY = "portfolio-prefs";
+const LEGACY_KEY = "portfolio-tweaks";
 
-const DEFAULT_TWEAKS: Tweaks = {
-  design: "navy",
+const DEFAULTS: Omit<Tweaks, "lang"> = {
+  design: "night",
   theme: "dark",
-  lang: "en",
 };
 
 const VALID_DESIGN: ReadonlySet<DesignId> = new Set<DesignId>(["navy", "terminal", "night"]);
@@ -42,31 +47,46 @@ function sanitize(input: unknown): Partial<Tweaks> {
   return out;
 }
 
-export default function PortfolioApp() {
-  const [tweaks, setTweaks] = useState<Tweaks>(DEFAULT_TWEAKS);
+function readStored(): Partial<Tweaks> {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? sanitize(JSON.parse(raw)) : {};
+  } catch {
+    // localStorage unavailable or JSON malformed — fall back to defaults.
+    return {};
+  }
+}
+
+type Props = {
+  /** The language this page is prerendered in ("/" is English, "/es/" Spanish). */
+  lang: Lang;
+};
+
+export default function PortfolioApp({ lang: pageLang }: Props) {
+  const [tweaks, setTweaks] = useState<Tweaks>({ ...DEFAULTS, lang: pageLang });
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
+  // Same order as the boot script in app/shell.tsx: query params win over stored prefs (so a link
+  // like /?design=terminal opens that view), and the page's language over a stored one, except on
+  // the English root, where a visitor who picked Spanish gets it back.
   useEffect(() => {
-    let stored: Partial<Tweaks> = {};
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) stored = sanitize(JSON.parse(raw));
+      window.localStorage.removeItem(LEGACY_KEY);
     } catch {
-      // localStorage unavailable or JSON malformed — fall back to defaults.
+      // Storage blocked: nothing to clean up.
     }
-    // Query params win over stored prefs, so a link like /?design=night&lang=es opens that view.
+    const stored = readStored();
     const params = new URLSearchParams(window.location.search);
     const fromUrl = sanitize({
       design: params.get("design") ?? undefined,
       theme: params.get("theme") ?? undefined,
       lang: params.get("lang") ?? undefined,
     });
-    if (Object.keys(stored).length > 0 || Object.keys(fromUrl).length > 0) {
-      setTweaks((prev) => ({ ...prev, ...stored, ...fromUrl }));
-    }
+    const lang = fromUrl.lang ?? (pageLang === "en" ? stored.lang : undefined) ?? pageLang;
+    setTweaks((prev) => ({ ...prev, ...stored, ...fromUrl, lang }));
     setHydrated(true);
-  }, []);
+  }, [pageLang]);
 
   // The visitor's own design is on screen now, so the boot script's cover (layout.tsx) can go.
   useEffect(() => {
@@ -79,18 +99,32 @@ export default function PortfolioApp() {
     if (hydrated) document.documentElement.lang = tweaks.lang;
   }, [tweaks.lang, hydrated]);
 
+  // The address follows the language ("/" or "/es/", both prerendered), so a reload or a shared
+  // link opens the page in the language on screen. A ?lang= that brought the visitor here has done
+  // its job and goes.
   useEffect(() => {
     if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tweaks));
-    } catch {
-      // Quota or privacy mode — state still works for this session.
-    }
-  }, [tweaks, hydrated]);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("lang");
+    url.pathname = PATHS[tweaks.lang];
+    if (url.href !== window.location.href) window.history.replaceState(null, "", url);
+  }, [tweaks.lang, hydrated]);
+
+  // The browser bar takes the design's background. One Night sets its own, scene by scene.
+  useEffect(() => {
+    if (!hydrated || tweaks.design === "night") return;
+    const color = backgroundFor(tweaks.design, tweaks.theme);
+    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => (m.content = color));
+  }, [tweaks.design, tweaks.theme, hydrated]);
 
   const setTweak = useCallback(
     <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => {
       setTweaks((prev) => ({ ...prev, [key]: value }));
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readStored(), [key]: value }));
+      } catch {
+        // Quota or privacy mode — state still works for this session.
+      }
     },
     [],
   );

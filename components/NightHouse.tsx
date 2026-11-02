@@ -3,6 +3,7 @@
 import Image from "next/image";
 import React, { useEffect, useRef, useState } from "react";
 import { projects, strings, type Project } from "@/lib/content";
+import { TakeFrames } from "@/lib/takeFrames";
 import { ProjectDetails, ProjectMeta, type Translate } from "./NightProject";
 import h from "./NightHouse.module.css";
 import ns from "./PortfolioNight.module.css";
@@ -107,6 +108,30 @@ const CLIPS: Partial<Record<Scene, string>> = {
   dawn: "take-dawn",
 };
 const CLIP_FPS = 60;
+
+/** A loaded transition take: how long it runs, and putting the frame at `t` seconds on screen. */
+type Take = { duration: number; show: (t: number) => void; close: () => void };
+
+/**
+ * The <video> path, for browsers without WebCodecs (see TakeFrames): one seek at a time, since a new
+ * seek cancels the pending one before its frame is painted, and the next one is asked for the moment
+ * a frame lands, so the decoder never waits on the next animation frame as well.
+ */
+function videoTake(video: HTMLVideoElement): Take {
+  let want = 0;
+  const seek = () => {
+    if (!video.seeking && Math.abs(video.currentTime - want) > 0.5 / CLIP_FPS) video.currentTime = want;
+  };
+  video.addEventListener("seeked", seek);
+  return {
+    duration: video.duration,
+    show: (t) => {
+      want = t;
+      seek();
+    },
+    close: () => video.removeEventListener("seeked", seek),
+  };
+}
 
 // How much scroll each camera move takes, in screen heights. The renderer and the camera's speed
 // limit (see `moves`) both read these, so they agree on where the camera is travelling.
@@ -261,10 +286,13 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
   const endRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const segRefs = useRef<Partial<Record<Scene, HTMLElement | null>>>({});
+  // Each take has a canvas (WebCodecs) and a <video> (the fallback); only the one in use is shown.
   const clipRefs = useRef<Partial<Record<Scene, HTMLVideoElement | null>>>({});
-  // The layer each clip lives in; the camera moves this, and on phones the tall video hangs below it.
+  const canvasRefs = useRef<Partial<Record<Scene, HTMLCanvasElement | null>>>({});
+  // The layer each clip lives in; the camera moves this, and on phones the tall frame hangs below it.
   const clipLayerRefs = useRef<Partial<Record<Scene, HTMLDivElement | null>>>({});
-  const clipReady = useRef<Partial<Record<Scene, boolean>>>({});
+  // Takes ready to play; until a scene's is, its stills stand in.
+  const takes = useRef<Partial<Record<Scene, Take>>>({});
 
   // Load each transition clip only when its scene is getting close, and never with reduced
   // motion or data saver on. Crossing the desktop/phone breakpoint later (a tablet turning) swaps
@@ -275,12 +303,20 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     if (reduce || saveData) return;
     const desktop = window.matchMedia("(min-width: 900px)");
     const wanted = new Set<Scene>();
+    const loading: Partial<Record<Scene, AbortController>> = {};
+    const all = takes.current;
 
-    const load = (scene: Scene) => {
+    const ready = (scene: Scene, take: Take, el: HTMLVideoElement | HTMLCanvasElement, tall: boolean) => {
+      el.dataset.tall = tall ? "1" : "0";
       const video = clipRefs.current[scene];
-      const name = CLIPS[scene];
-      if (!video || !name) return;
-      clipReady.current[scene] = false;
+      const canvas = canvasRefs.current[scene];
+      if (video) video.hidden = el !== video;
+      if (canvas) canvas.hidden = el !== canvas;
+      all[scene] = take;
+      window.dispatchEvent(new Event("scroll"));
+    };
+
+    const loadVideo = (scene: Scene, video: HTMLVideoElement, url: string, signal: AbortSignal) => {
       video.addEventListener(
         "loadeddata",
         () => {
@@ -291,16 +327,41 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
             .then(() => {
               video.pause();
               // Read from the source actually loaded, in case the cut was swapped mid-load.
-              video.dataset.tall = video.currentSrc.endsWith("-720.mp4") ? "1" : "0";
-              clipReady.current[scene] = true;
-              window.dispatchEvent(new Event("scroll"));
+              if (!signal.aborted) ready(scene, videoTake(video), video, video.currentSrc.endsWith("-720.mp4"));
             })
             .catch(() => undefined);
         },
         { once: true },
       );
-      video.src = `/night/clips/${name}-${desktop.matches ? "1080" : "720"}.mp4`;
+      video.src = url;
       video.load();
+    };
+
+    const load = (scene: Scene) => {
+      const video = clipRefs.current[scene];
+      const canvas = canvasRefs.current[scene];
+      const name = CLIPS[scene];
+      if (!video || !canvas || !name) return;
+      loading[scene]?.abort();
+      all[scene]?.close();
+      delete all[scene];
+      const ctl = new AbortController();
+      loading[scene] = ctl;
+      const tall = !desktop.matches;
+      const url = `/night/clips/${name}-${tall ? "720" : "1080"}.mp4`;
+      if (!TakeFrames.supported()) {
+        loadVideo(scene, video, url, ctl.signal);
+        return;
+      }
+      TakeFrames.load(url, canvas, ctl.signal)
+        .then((frames) => {
+          if (ctl.signal.aborted) frames?.close();
+          else if (frames) ready(scene, frames, canvas, tall);
+          else loadVideo(scene, video, url, ctl.signal);
+        })
+        .catch(() => {
+          if (!ctl.signal.aborted) loadVideo(scene, video, url, ctl.signal);
+        });
     };
 
     const io = new IntersectionObserver(
@@ -324,6 +385,8 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     return () => {
       io.disconnect();
       desktop.removeEventListener("change", swap);
+      for (const ctl of Object.values(loading)) ctl?.abort();
+      for (const take of Object.values(all)) take?.close();
     };
   }, []);
 
@@ -372,8 +435,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     // trackpad flicks become one continuous move instead of a series of jumps.
     let smoothY = window.scrollY;
     let lastTarget = smoothY;
-    // The take time the camera last asked each visible video for (see onSeeked).
-    const wantTime = new Map<HTMLVideoElement, number>();
     let last = 0;
     // A nav link scrolls smoothly across the whole house; the camera snaps along with it.
     let jumping = false;
@@ -419,13 +480,13 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       // A transition clip that's loaded and allowed to play, or null to fall back to the stills.
       const readyClip = (scene: Scene) => {
-        const c = clipRefs.current[scene];
-        return c && clipReady.current[scene] && !reduce.matches && c.duration > 0 ? c : null;
+        const take = takes.current[scene];
+        return take && !reduce.matches && take.duration > 0 ? take : null;
       };
       // Clip opacity: in right away (its first frame matches the still underneath), out once the
       // still that matches its last frame has fully covered it.
       const clipOpacity = (k: number) => clamp01(k / 0.03) * (1 - clamp01((k - 0.98) / 0.02));
-      const clipTime = (c: HTMLVideoElement, k: number) => k * Math.max(0, c.duration - 0.05);
+      const clipTime = (c: Take, k: number) => k * Math.max(0, c.duration - 0.05);
 
       const seg = segs.find((sg) => Y >= sg.top && Y < sg.top + sg.height);
       const active = seg?.id;
@@ -588,9 +649,9 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       place(kitchen, kitchen.offsetWidth, kitchen.offsetHeight, fw, fh, st.kitchen.cam, "cover");
       show(kitchen, st.kitchen.o);
-      for (const [scene, video] of Object.entries(clipRefs.current) as [Scene, HTMLVideoElement | null][]) {
+      for (const scene of Object.keys(CLIPS) as Scene[]) {
         const layer = clipLayerRefs.current[scene];
-        if (!video || !layer) continue;
+        if (!layer) continue;
         const c = st.clip?.scene === scene ? st.clip : null;
         if (c && c.o > 0) {
           // Blend between the two clamps instead of switching, so the framing never jumps: the clip
@@ -600,12 +661,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
           const a = frameFor(vw, vh, fw, fh, c.cam, "cover");
           const b = c.lift > 0 ? frameFor(vw, vh, fw, fh, c.cam, close) : a;
           apply(layer, lerp(a.tx, b.tx, c.lift), lerp(a.ty, b.ty, c.lift), c.cam.s);
-          // One seek at a time: a new seek cancels the pending one before its frame is painted, so on
-          // fast screens most frames were skipped. The `seeked` listener asks for the next one.
-          wantTime.set(video, c.t);
-          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) video.currentTime = c.t;
-        } else {
-          wantTime.delete(video);
+          takes.current[scene]?.show(c.t);
         }
         show(layer, c ? c.o : 0);
       }
@@ -700,17 +756,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(step);
     };
-    // A phone needs one to two screen refreshes per seek, and waiting for the next animation frame to
-    // ask for the following one added another: a moving take showed a new frame on barely a third of
-    // the screen's frames (~20 a second) while the stills moved on every one. The next frame is asked
-    // for the moment one lands, so the decoder never sits idle. Desktop seeks land within a frame
-    // anyway.
-    const onSeeked = (e: Event) => {
-      const video = e.currentTarget as HTMLVideoElement;
-      const t = wantTime.get(video);
-      if (t !== undefined && !video.seeking && Math.abs(video.currentTime - t) > 0.5 / CLIP_FPS) video.currentTime = t;
-      schedule();
-    };
     const onScroll = () => {
       // The nav jump is over once the smooth scroll stops.
       if (jumping) endJumpIn(200);
@@ -725,8 +770,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     render(smoothY);
     const ro = new ResizeObserver(remeasure);
     ro.observe(track);
-    const videos = Object.values(clipRefs.current).filter((v): v is HTMLVideoElement => !!v);
-    for (const v of videos) v.addEventListener("seeked", onSeeked);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", remeasure);
     document.addEventListener("click", onClick);
@@ -736,7 +779,6 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       cancelAnimationFrame(raf);
       window.clearTimeout(jumpTimer);
       ro.disconnect();
-      for (const v of videos) v.removeEventListener("seeked", onSeeked);
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("click", onClick);
       window.removeEventListener("resize", remeasure);
@@ -769,11 +811,18 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
               className={`${h.layer} ${h.clip}`}
               style={plate(16 / 9)}
             >
+              <canvas
+                ref={(el) => {
+                  canvasRefs.current[scene] = el;
+                }}
+                className={h.clipFrame}
+                hidden
+              />
               <video
                 ref={(el) => {
                   clipRefs.current[scene] = el;
                 }}
-                className={h.clipVideo}
+                className={h.clipFrame}
                 muted
                 playsInline
                 preload="none"

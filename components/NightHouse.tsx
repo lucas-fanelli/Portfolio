@@ -372,6 +372,8 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     // trackpad flicks become one continuous move instead of a series of jumps.
     let smoothY = window.scrollY;
     let lastTarget = smoothY;
+    // The take time the camera last asked each visible video for (see onSeeked).
+    const wantTime = new Map<HTMLVideoElement, number>();
     let last = 0;
     // A nav link scrolls smoothly across the whole house; the camera snaps along with it.
     let jumping = false;
@@ -599,8 +601,11 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
           const b = c.lift > 0 ? frameFor(vw, vh, fw, fh, c.cam, close) : a;
           apply(layer, lerp(a.tx, b.tx, c.lift), lerp(a.ty, b.ty, c.lift), c.cam.s);
           // One seek at a time: a new seek cancels the pending one before its frame is painted, so on
-          // fast screens most frames were skipped. The `seeked` listener re-renders to catch up.
+          // fast screens most frames were skipped. The `seeked` listener asks for the next one.
+          wantTime.set(video, c.t);
           if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) video.currentTime = c.t;
+        } else {
+          wantTime.delete(video);
         }
         show(layer, c ? c.o : 0);
       }
@@ -695,6 +700,17 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(step);
     };
+    // A phone needs one to two screen refreshes per seek, and waiting for the next animation frame to
+    // ask for the following one added another: a moving take showed a new frame on barely a third of
+    // the screen's frames (~20 a second) while the stills moved on every one. The next frame is asked
+    // for the moment one lands, so the decoder never sits idle. Desktop seeks land within a frame
+    // anyway.
+    const onSeeked = (e: Event) => {
+      const video = e.currentTarget as HTMLVideoElement;
+      const t = wantTime.get(video);
+      if (t !== undefined && !video.seeking && Math.abs(video.currentTime - t) > 0.5 / CLIP_FPS) video.currentTime = t;
+      schedule();
+    };
     const onScroll = () => {
       // The nav jump is over once the smooth scroll stops.
       if (jumping) endJumpIn(200);
@@ -710,7 +726,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     const ro = new ResizeObserver(remeasure);
     ro.observe(track);
     const videos = Object.values(clipRefs.current).filter((v): v is HTMLVideoElement => !!v);
-    for (const v of videos) v.addEventListener("seeked", schedule);
+    for (const v of videos) v.addEventListener("seeked", onSeeked);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", remeasure);
     document.addEventListener("click", onClick);
@@ -720,7 +736,7 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       cancelAnimationFrame(raf);
       window.clearTimeout(jumpTimer);
       ro.disconnect();
-      for (const v of videos) v.removeEventListener("seeked", schedule);
+      for (const v of videos) v.removeEventListener("seeked", onSeeked);
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("click", onClick);
       window.removeEventListener("resize", remeasure);

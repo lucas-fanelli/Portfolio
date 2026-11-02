@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import DesignSwitcher from "./DesignSwitcher";
 import PortfolioNavy from "./PortfolioNavy";
 import PortfolioNight from "./PortfolioNight";
@@ -47,6 +47,28 @@ function sanitize(input: unknown): Partial<Tweaks> {
   return out;
 }
 
+// The designs share the window's one scroll position but not its length: One Night's house is ~25
+// screens, Minimal ~7. A switch used to keep the pixel offset, so coming back to One Night after
+// scrolling Minimal landed wherever that offset fell in the house (Remy, usually). Each design now
+// keeps its own place for the visit; one not opened yet opens at the section the visitor was reading.
+// Sections bottom-up, by the ids the designs share; One Night's project list counts as the work.
+const SECTIONS = ["contact", "projects", "about", "work"] as const;
+
+function sectionInView(): string | null {
+  // At the very bottom the last section can be too short to reach the middle of the screen.
+  const root = document.documentElement;
+  if (window.scrollY + window.innerHeight >= root.scrollHeight - 2) return "contact";
+  return SECTIONS.find((id) => {
+    const el = document.getElementById(id);
+    return el !== null && el.getBoundingClientRect().top <= window.innerHeight / 2;
+  }) ?? null;
+}
+
+function sectionElement(id: string | null): HTMLElement | null {
+  if (!id) return null;
+  return document.getElementById(id) ?? (id === "projects" ? document.getElementById("work") : null);
+}
+
 function readStored(): Partial<Tweaks> {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -66,6 +88,10 @@ export default function PortfolioApp({ lang: pageLang }: Props) {
   const [tweaks, setTweaks] = useState<Tweaks>({ ...DEFAULTS, lang: pageLang });
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const designRef = useRef(tweaks.design);
+  const scrollByDesign = useRef<Partial<Record<DesignId, number>>>({});
+  // Set by a design switch (not by the saved design arriving on load) until the new one is placed.
+  const switchFrom = useRef<{ section: string | null } | null>(null);
 
   // Same order as the boot script in app/shell.tsx: query params win over stored prefs (so a link
   // like /?design=terminal opens that view), and the page's language over a stored one, except on
@@ -117,8 +143,25 @@ export default function PortfolioApp({ lang: pageLang }: Props) {
     document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => (m.content = color));
   }, [tweaks.design, tweaks.theme, hydrated]);
 
+  // Runs after the new design is in the DOM and before it's painted, so it never shows at the old offset.
+  useLayoutEffect(() => {
+    designRef.current = tweaks.design;
+    const from = switchFrom.current;
+    if (!from) return;
+    switchFrom.current = null;
+    const saved = scrollByDesign.current[tweaks.design];
+    const section = sectionElement(from.section);
+    if (saved !== undefined) window.scrollTo({ top: saved, behavior: "instant" });
+    else if (section) section.scrollIntoView({ block: "start", behavior: "instant" });
+    else window.scrollTo({ top: 0, behavior: "instant" });
+  }, [tweaks.design]);
+
   const setTweak = useCallback(
     <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => {
+      if (key === "design" && value !== designRef.current) {
+        scrollByDesign.current[designRef.current] = window.scrollY;
+        switchFrom.current = { section: sectionInView() };
+      }
       setTweaks((prev) => ({ ...prev, [key]: value }));
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readStored(), [key]: value }));

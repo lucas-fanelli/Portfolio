@@ -114,8 +114,10 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
   const PAD_TOP = isMobile ? 20 : 32;
   const PAD_BOTTOM = isMobile ? 48 : 64;
 
-  const Prompt = ({ cmd, host = "uma", user = "lucas" }: { cmd: string; host?: string; user?: string }) => (
-    <div style={{ marginBottom: 14 }}>
+  // `id`: the section this command opens (work, about, contact), shared with the other designs so a
+  // design switch can land on the same section. The margin clears the sticky title bar.
+  const Prompt = ({ cmd, host = "uma", user = "lucas", id }: { cmd: string; host?: string; user?: string; id?: string }) => (
+    <div id={id} style={{ marginBottom: 14, scrollMarginTop: 64 }}>
       <span style={{ color: c.promptUser }}>{user}</span>
       <span style={{ color: c.muted }}>@</span>
       <span style={{ color: c.promptHost }}>{host}</span>
@@ -276,7 +278,7 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
 
         <hr style={hr(c)} />
 
-        <Prompt cmd="ls -la ~/projects" />
+        <Prompt id="work" cmd="ls -la ~/projects" />
         <pre
           style={{
             margin: "0 0 18px",
@@ -419,7 +421,7 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
 
         <hr style={hr(c)} />
 
-        <Prompt cmd="cat ~/about.yml" />
+        <Prompt id="about" cmd="cat ~/about.yml" />
         <pre
           style={{
             margin: "0 0 28px",
@@ -569,7 +571,7 @@ export default function PortfolioTerminal({ theme, lang, setTheme, setLang }: Pr
 
         <hr style={hr(c)} />
 
-        <Prompt cmd="contact --resolve" />
+        <Prompt id="contact" cmd="contact --resolve" />
         <pre
           style={{
             margin: 0,

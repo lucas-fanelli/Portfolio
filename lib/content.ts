@@ -63,6 +63,11 @@ export type Strings = {
     intro: Localized;
     available: Localized;
     based: Localized;
+    seeWork: Localized;
+    cv: Localized;
+    email: Localized;
+    skipHint: Localized;
+    skip: Localized;
   };
   sections: {
     work: Localized;
@@ -77,6 +82,8 @@ export type Strings = {
     copyEmail: Localized;
     copied: Localized;
     copyFailed: Localized;
+    index: Localized;
+    indexNote: Localized;
     philosophy: Localized;
     quality: Localized;
     tools: Localized;
@@ -99,6 +106,8 @@ export type Strings = {
     code: Localized;
     more: Localized;
     less: Localized;
+    chapters: Localized;
+    start: Localized;
     plateCredit: Localized;
     hours: Record<
       "dusk" | "remy" | "heladera" | "withdrawal" | "jarvis" | "sleepsync" | "dawn",
@@ -153,6 +162,11 @@ export const strings: Strings = {
     },
     available: { es: "Abierto a ofertas", en: "Open to offers" },
     based: { es: "Remoto / Oficina", en: "Remote / Office" },
+    seeWork: { es: "Ver proyectos", en: "See the work" },
+    cv: { es: "Descargar CV", en: "Download CV" },
+    email: { es: "Email", en: "Email" },
+    skipHint: { es: "¿Poco tiempo?", en: "Short on time?" },
+    skip: { es: "Saltar el recorrido", en: "Skip the tour" },
   },
   sections: {
     work: { es: "Proyectos seleccionados", en: "Selected work" },
@@ -173,6 +187,11 @@ export const strings: Strings = {
     copyEmail: { es: "Copiar email", en: "Copy email" },
     copied: { es: "Copiado", en: "Copied" },
     copyFailed: { es: "No se pudo copiar: selecciona el email", en: "Couldn't copy: select the address" },
+    index: { es: "Proyectos en resumen", en: "Projects at a glance" },
+    indexNote: {
+      es: "Los mismos proyectos, sin el recorrido por la casa.",
+      en: "The same projects, without the walk through the house.",
+    },
     philosophy: { es: "Filosofía", en: "Philosophy" },
     quality: { es: "Estándares de calidad", en: "Quality standards" },
     tools: { es: "Herramientas", en: "Tools" },
@@ -201,6 +220,8 @@ export const strings: Strings = {
     code: { es: "Ver código real", en: "View real code" },
     more: { es: "Ver arquitectura y detalles", en: "Architecture and details" },
     less: { es: "Ocultar detalles", en: "Hide details" },
+    chapters: { es: "La noche, hora por hora", en: "The night, hour by hour" },
+    start: { es: "Inicio", en: "Start" },
     plateCredit: {
       es: "Ambientes generados con IA (Higgsfield). Los proyectos, el código y los diagramas son reales.",
       en: "Ambient plates generated with AI (Higgsfield). Projects, code and diagrams are real.",
@@ -686,7 +707,17 @@ export const skills: Skill[] = [
 
 export const tools: string[] = ["Unity", "Git", "VS Code", "IntelliJ"];
 
-export const academics = { gpa: "8,7", access: "13,400" } as const;
+/** The one-page CV in each language, printed from scripts/cv.mjs. */
+export const cvFiles: Localized = {
+  es: "/cv/lucas-fanelli-cv-es.pdf",
+  en: "/cv/lucas-fanelli-cv-en.pdf",
+};
+
+// Decimal comma in Spanish, point in English ("13,400" read as thirteen thousand in English).
+export const academics: { gpa: Localized; access: Localized } = {
+  gpa: { es: "8,7", en: "8.7" },
+  access: { es: "13,400", en: "13.400" },
+};
 
 /** Widest line of an ASCII diagram, in characters. Designs size the font so this many columns fit. */
 export function diagramColumns(diagram: string): number {

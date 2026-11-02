@@ -94,9 +94,9 @@ const DESIGN_SWATCHES: {
   desc: string;
   preview: React.ReactNode;
 }[] = [
+  { id: "night", title: "One Night", desc: "Cinematic · one scene per project · own palette", preview: <NightPreview /> },
   { id: "navy", title: "Navy Minimal", desc: "Clean sans · navy accent · code snippets", preview: <NavyPreview /> },
   { id: "terminal", title: "Terminal Dev", desc: "Monospace shell · ASCII · ANSI palette", preview: <TerminalPreview /> },
-  { id: "night", title: "One Night", desc: "Cinematic · one scene per project · own palette", preview: <NightPreview /> },
 ];
 
 const THEMES: { id: Theme; bg: string; ink: string }[] = [

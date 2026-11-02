@@ -4,6 +4,7 @@ import Image from "next/image";
 import React, { useEffect, useRef, useState } from "react";
 import {
   academics,
+  cvFiles,
   identity,
   pick,
   skills,
@@ -12,8 +13,8 @@ import {
   type Lang,
   type Theme,
 } from "@/lib/content";
-import NightHouse from "./NightHouse";
-import { type Translate } from "./NightProject";
+import NightHouse, { HOUSE_CHAPTERS } from "./NightHouse";
+import { ProjectMeta, type Translate } from "./NightProject";
 import s from "./PortfolioNight.module.css";
 
 type Props = {
@@ -30,8 +31,10 @@ export default function PortfolioNight({ lang, setLang }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const progressRef = useRef<HTMLSpanElement>(null);
   const [hour, setHour] = useState("20:00");
   const [tone, setTone] = useState<Tone>("dark");
+  const [chapter, setChapter] = useState("top");
   const [menuOpen, setMenuOpen] = useState(false);
   const [copy, setCopy] = useState<"idle" | "done" | "failed">("idle");
 
@@ -100,7 +103,7 @@ export default function PortfolioNight({ lang, setLang }: Props) {
     );
     root.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => reveal.observe(el));
 
-    // The nav clock follows whichever scene crosses the middle of the viewport.
+    // The nav clock (and the chapter menu) follow whichever scene crosses the middle of the viewport.
     const clock = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -108,17 +111,47 @@ export default function PortfolioNight({ lang, setLang }: Props) {
           const el = entry.target as HTMLElement;
           setHour(el.dataset.hour ?? "20:00");
           setTone(el.dataset.tone === "light" ? "light" : "dark");
+          if (el.dataset.chapter) setChapter(el.dataset.chapter);
         }
       },
       { rootMargin: "-45% 0px -50% 0px" },
     );
     root.querySelectorAll<HTMLElement>("[data-hour]").forEach((el) => clock.observe(el));
 
+    // How far down the page the visitor is: a thin line along the bottom of the nav.
+    let raf = 0;
+    const progress = () => {
+      raf = 0;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressRef.current?.style.setProperty("transform", `scaleX(${p.toFixed(4)})`);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(progress);
+    };
+    progress();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
     return () => {
       reveal.disconnect();
       clock.disconnect();
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
+
+  // The phone menu lists the night hour by hour; the scene on screen is marked, and the ones
+  // already seen are filled in up to it.
+  const chapters = [
+    { id: "top", hour: "20:00", name: t(strings.night.start) },
+    ...HOUSE_CHAPTERS.map(({ project, hour }) => ({ id: project.id, hour, name: project.name })),
+    { id: "about", hour: "06:00", name: t(strings.nav.about) },
+  ];
+  const current = Math.max(0, chapters.findIndex((c) => c.id === chapter));
+  const closeMenu = () => setMenuOpen(false);
+  const cv = t(cvFiles);
 
   const [firstName, ...rest] = identity.name.split(" ");
   const givenNames = [firstName, rest[0]].join(" ");
@@ -168,6 +201,19 @@ export default function PortfolioNight({ lang, setLang }: Props) {
         <p className={`${s.intro} ${s.enter}`} style={{ animationDelay: "0.5s" }}>
           {t(strings.hero.intro)}
         </p>
+        <div className={`${s.actions} ${s.enter}`} style={{ animationDelay: "0.6s" }}>
+          <a className={s.actionMain} href="#work">
+            {t(strings.hero.seeWork)}
+          </a>
+          <a href={cv} download>
+            {t(strings.hero.cv)}
+            <span className={s.actionNote}>PDF</span>
+          </a>
+          <a href={`mailto:${identity.email}`}>{t(strings.hero.email)}</a>
+        </div>
+        <p className={`${s.skipHint} ${s.enter}`} style={{ animationDelay: "0.66s" }}>
+          {t(strings.hero.skipHint)} <a href="#projects">{t(strings.hero.skip)} →</a>
+        </p>
       </div>
       <div className={`${s.cue} ${s.enter}`} style={{ animationDelay: "0.9s" }} aria-hidden="true">
         <p className={s.cueLine}>{t(strings.night.kicker)}</p>
@@ -202,9 +248,14 @@ export default function PortfolioNight({ lang, setLang }: Props) {
 
   return (
     <div ref={rootRef} className={s.root} data-screen-label="One Night">
+      {/* Keyboard users land here first: straight to the project list, past the whole house. */}
+      <a className={s.skipLink} href="#projects">
+        {t(strings.hero.skip)}
+      </a>
       <div className={s.grain} aria-hidden="true" />
 
       <nav ref={navRef} className={s.nav} data-tone={tone} aria-label="Primary">
+        <span ref={progressRef} className={s.progress} aria-hidden="true" />
         <a href="#top" className={s.brand}>
           Lucas Fanelli
         </a>
@@ -220,6 +271,10 @@ export default function PortfolioNight({ lang, setLang }: Props) {
           <a href="#work">{t(strings.nav.work)}</a>
           <a href="#about">{t(strings.nav.about)}</a>
           <a href="#contact">{t(strings.nav.contact)}</a>
+          {/* Always in reach: on most laptops the hero's own CV button sits just below the first screen. */}
+          <a href={cv} download>
+            CV ↓
+          </a>
         </div>
         {/* Phones: the links fold behind this button; without it, Contact is twenty screens away. */}
         <button
@@ -234,15 +289,34 @@ export default function PortfolioNight({ lang, setLang }: Props) {
           <span className={s.menuIcon} aria-hidden="true" />
         </button>
         <div id="night-menu" className={s.menu} hidden={!menuOpen}>
-          <a href="#work" onClick={() => setMenuOpen(false)}>
-            {t(strings.nav.work)}
-          </a>
-          <a href="#about" onClick={() => setMenuOpen(false)}>
-            {t(strings.nav.about)}
-          </a>
-          <a href="#contact" onClick={() => setMenuOpen(false)}>
-            {t(strings.nav.contact)}
-          </a>
+          <p id="night-menu-label" className={s.menuLabel}>
+            {t(strings.night.chapters)}
+          </p>
+          <ol
+            className={s.chapters}
+            aria-labelledby="night-menu-label"
+            style={{ "--done": current / (chapters.length - 1) } as React.CSSProperties}
+          >
+            {chapters.map((c, i) => (
+              <li key={c.id} data-state={i < current ? "done" : i === current ? "now" : "next"}>
+                <a href={`#${c.id}`} aria-current={i === current ? "location" : undefined} onClick={closeMenu}>
+                  <span className={s.chapterHour}>{c.hour}</span>
+                  <span className={s.chapterName}>{c.name}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          <div className={s.menuLinks}>
+            <a href="#projects" onClick={closeMenu}>
+              {t(strings.sections.index)}
+            </a>
+            <a href="#contact" onClick={closeMenu}>
+              {t(strings.nav.contact)}
+            </a>
+            <a href={cv} download onClick={closeMenu}>
+              CV (PDF)
+            </a>
+          </div>
         </div>
         <button
           type="button"
@@ -257,9 +331,10 @@ export default function PortfolioNight({ lang, setLang }: Props) {
       <main>
         <NightHouse t={t} intro={intro} workIntro={workIntro} dawn={dawnIntro} />
 
-        {/* 06:00 — dawn: titled by the heading that closes the house above */}
-        <section className={s.dawn} aria-labelledby="about-title" data-hour="06:00" data-tone="light">
-          <div className={s.about}>
+        {/* 06:00 — dawn, in cream: About (titled by the heading that closes the house above), the
+            project list and Contact. */}
+        <div className={s.dawn} data-hour="06:00" data-tone="light" data-chapter="about">
+          <section className={s.about} aria-labelledby="about-title">
             <div>
               <div className={s.block} data-reveal="">
                 <h3 className={s.listLabel}>{t(strings.sections.education)}</h3>
@@ -269,11 +344,11 @@ export default function PortfolioNight({ lang, setLang }: Props) {
                 </p>
                 <div className={s.figures}>
                   <div className={s.figure}>
-                    <span className={s.figureValue}>{academics.gpa}</span>
+                    <span className={s.figureValue}>{t(academics.gpa)}</span>
                     <span className={s.listLabel}>{t(strings.education.gpa)}</span>
                   </div>
                   <div className={s.figure}>
-                    <span className={s.figureValue}>{academics.access}</span>
+                    <span className={s.figureValue}>{t(academics.access)}</span>
                     <span className={s.listLabel}>{t(strings.education.access)}</span>
                   </div>
                 </div>
@@ -339,10 +414,39 @@ export default function PortfolioNight({ lang, setLang }: Props) {
                 </p>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div id="contact" className={s.contact}>
-            <h2 className={s.sectionLabel} data-reveal="">
+          {/* Everything the house shows, in one list: where "Skip the tour" leads. */}
+          <section id="projects" className={s.index} aria-labelledby="projects-title">
+            <h2 id="projects-title" className={s.sectionLabel} data-reveal="">
+              {t(strings.sections.index)}
+            </h2>
+            <p className={s.indexNote} data-reveal="">
+              {t(strings.sections.indexNote)}
+            </p>
+            <ol className={s.indexList}>
+              {HOUSE_CHAPTERS.map(({ project: p, hour }) => (
+                <li key={p.id} className={s.indexRow} data-reveal="">
+                  <span className={s.indexHour}>{hour}</span>
+                  <div>
+                    <h3 className={s.indexName}>
+                      <a href={`#${p.id}`}>
+                        {p.name} <span aria-hidden="true">↑</span>
+                      </a>
+                    </h3>
+                    <p className={s.indexTagline}>{t(p.tagline)}</p>
+                    <p className={s.indexStack}>{p.stack.join(" · ")}</p>
+                  </div>
+                  <div className={s.indexMeta}>
+                    <ProjectMeta proj={p} t={t} />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section id="contact" className={s.contact} aria-labelledby="contact-title">
+            <h2 id="contact-title" className={s.sectionLabel} data-reveal="">
               {t(strings.sections.contact)}
             </h2>
             <p className={s.contactNote} data-reveal="">
@@ -371,6 +475,11 @@ export default function PortfolioNight({ lang, setLang }: Props) {
                   GitHub ↗
                 </a>
               </li>
+              <li>
+                <a href={cv} download>
+                  CV (PDF) ↓
+                </a>
+              </li>
             </ul>
 
             <footer className={s.footer}>
@@ -380,8 +489,8 @@ export default function PortfolioNight({ lang, setLang }: Props) {
               <span>{identity.location}</span>
               <p className={s.credit}>{t(strings.night.plateCredit)}</p>
             </footer>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     </div>
   );

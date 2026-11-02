@@ -117,13 +117,22 @@ const GAME_IN_AT = 0.3; // Withdrawal's zoom waits for the desk to fade in from 
 const TURN = 0.7;
 const DAWN = 0.9;
 
-// On touch screens a flick scrolls through a whole scene in a fraction of a second, so the camera
-// jumped from still to still with the clip in between reduced to a few frames. While it travels it
-// is held to MOVE_SPEED (screens per second), so a zoom takes at least about a second however fast
-// the page scrolls; the limit rises once it falls more than CATCH_UP screens behind, so a long fling
-// isn't followed by a slow tour of every room. Desktop wheels never get fast enough to need it.
-const MOVE_SPEED = 0.7;
+// A fast scroll (a trackpad or wheel flick, a phone fling) crosses a whole scene in a fraction of a
+// second, and a camera that followed it jumped from still to still with the take in between reduced
+// to a frame or two. While it travels, each camera move takes at least MIN_MOVE seconds however fast
+// the page goes, so it plays as motion; a normal read is slower than that and never feels it. Once the
+// camera falls more than CATCH_UP screens behind it hurries, so a long fling isn't followed by a slow
+// tour of every room, but never past FAST_MOVE per move, so every move is still seen.
+const MIN_MOVE = 0.75;
+const FAST_MOVE = 0.15;
 const CATCH_UP = 1.5;
+// A take only shows the frames it has decoded, and a phone needs several screen frames per seek: a
+// camera that outran it skipped most of the take, which is what still looked like a jump on phones.
+// Inside a take's move the camera stays within 1/FRAMES_PER_MOVE of the move of the frame last asked
+// for, so any move shows at least that many frames however slow the decoder; a seek that hangs for
+// SEEK_GIVE_UP ms stops holding it back. Desktop decoders keep up and never feel it.
+const FRAMES_PER_MOVE = 16;
+const SEEK_GIVE_UP = 250;
 
 /** Where in a segment the camera travels between stills, as [from, to] scroll offsets. */
 function moves(id: Scene, len: number, V: number): [number, number][] {
@@ -371,7 +380,9 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
     let smoothY = window.scrollY;
     let lastTarget = smoothY;
     let last = 0;
-    const touch = window.matchMedia("(pointer: coarse)");
+    // The take move on screen ([a, b] in page coordinates) and the camera position its last seek asked
+    // for, at `time` (see FRAMES_PER_MOVE).
+    let seekLock: { a: number; b: number; y: number; time: number } | null = null;
     // A nav link scrolls smoothly across the whole house; the camera snaps along with it.
     let jumping = false;
     let jumpTimer = 0;
@@ -426,6 +437,8 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       const seg = segs.find((sg) => Y >= sg.top && Y < sg.top + sg.height);
       const active = seg?.id;
+      // The camera move Y is in, in page coordinates, for the seek lock.
+      const move = seg && moves(seg.id, seg.height, V).find(([a, b]) => Y - seg.top >= a && Y - seg.top <= b);
 
       if (!seg || !active) {
         // Past the house: hold the last frame (the bedroom at dawn, melted into cream at the bottom).
@@ -585,6 +598,8 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
 
       place(kitchen, kitchen.offsetWidth, kitchen.offsetHeight, fw, fh, st.kitchen.cam, "cover");
       show(kitchen, st.kitchen.o);
+      const moveA = seg && move ? seg.top + move[0] : NaN;
+      if (!st.clip || st.clip.o <= 0 || !move || seekLock?.a !== moveA) seekLock = null;
       for (const [scene, video] of Object.entries(clipRefs.current) as [Scene, HTMLVideoElement | null][]) {
         const layer = clipLayerRefs.current[scene];
         if (!video || !layer) continue;
@@ -599,7 +614,10 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
           apply(layer, lerp(a.tx, b.tx, c.lift), lerp(a.ty, b.ty, c.lift), c.cam.s);
           // One seek at a time: a new seek cancels the pending one before its frame is painted, so on
           // fast screens most frames were skipped. The `seeked` listener re-renders to catch up.
-          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) video.currentTime = c.t;
+          if (!video.seeking && Math.abs(video.currentTime - c.t) > 0.5 / CLIP_FPS) {
+            video.currentTime = c.t;
+            if (seg && move) seekLock = { a: moveA, b: seg.top + move[1], y: Y, time: performance.now() };
+          }
         }
         show(layer, c ? c.o : 0);
       }
@@ -649,13 +667,15 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       end.style.opacity = st.end.toFixed(3);
     };
 
-    // Touch screens only: inside a camera move, a step is held to the speed limit; on the way to the
+    // Inside a camera move, a step is held to the move's speed limit (see MIN_MOVE); on the way to the
     // next move it stops at its start, so no move is entered at full speed.
     const limit = (y: number, d: number, gap: number, dt: number, V: number) => {
       const down = d > 0;
-      if (spans.some(([a, b]) => (down ? y >= a && y < b : y > a && y <= b))) {
-        const max = MOVE_SPEED * V * Math.max(1, Math.abs(gap) / (CATCH_UP * V)) * dt;
-        return Math.max(-max, Math.min(max, d));
+      const span = spans.find(([a, b]) => (down ? y >= a && y < b : y > a && y <= b));
+      if (span) {
+        const len = span[1] - span[0];
+        const speed = Math.min((len / MIN_MOVE) * Math.max(1, Math.abs(gap) / (CATCH_UP * V)), len / FAST_MOVE);
+        return Math.max(-speed * dt, Math.min(speed * dt, d));
       }
       for (const [a, b] of spans) {
         if (down && y < a && y + d > a) d = a - y;
@@ -672,18 +692,18 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       const V = stage.clientHeight;
       const gap = target - smoothY;
       // Snap on reduced motion, while a nav link scrolls the page, and on instant jumps (restored
-      // scroll) so the camera doesn't fly through every room on the way. Without the touch speed
-      // limit the camera never falls 2 screens behind on its own, so on desktop that's a jump too.
-      if (
-        reduce.matches ||
-        jumping ||
-        Math.abs(target - lastTarget) > 1.5 * V ||
-        (!touch.matches && Math.abs(gap) > 2 * V)
-      ) {
+      // scroll, Home/End) so the camera doesn't fly through every room on the way.
+      if (reduce.matches || jumping || Math.abs(target - lastTarget) > 1.5 * V) {
         smoothY = target;
       } else {
         const d = gap * (1 - Math.exp(-dt * 9));
-        smoothY += touch.matches ? limit(smoothY, d, gap, dt, V) : d;
+        let next = smoothY + limit(smoothY, d, gap, dt, V);
+        const lock = seekLock;
+        if (lock && now - lock.time < SEEK_GIVE_UP && next >= lock.a && next <= lock.b) {
+          const lead = (lock.b - lock.a) / FRAMES_PER_MOVE;
+          next = Math.max(lock.y - lead, Math.min(lock.y + lead, next));
+        }
+        smoothY = next;
       }
       lastTarget = target;
       if (Math.abs(target - smoothY) < 0.5) smoothY = target;

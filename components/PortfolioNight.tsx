@@ -28,8 +28,57 @@ type Tone = "dark" | "light";
 export default function PortfolioNight({ lang, setLang }: Props) {
   const t: Translate = (value) => pick(value, lang);
   const rootRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [hour, setHour] = useState("20:00");
   const [tone, setTone] = useState<Tone>("dark");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [copy, setCopy] = useState<"idle" | "done" | "failed">("idle");
+
+  // The phone menu closes on Escape (focus back on its button) and on a tap outside the nav.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    const onDown = (e: PointerEvent) => {
+      if (!navRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [menuOpen]);
+
+  // The phone's browser bar takes the scene's colour: night, then the cream of dawn. The layout's
+  // theme colours belong to the default design, so they're put back when this one unmounts.
+  useEffect(() => {
+    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const before = metas.map((m) => m.content);
+    for (const m of metas) m.content = tone === "light" ? "#f2ebe1" : "#0b0c0e";
+    return () => metas.forEach((m, i) => (m.content = before[i]));
+  }, [tone]);
+
+  useEffect(() => {
+    if (copy === "idle") return;
+    const id = window.setTimeout(() => setCopy("idle"), copy === "done" ? 2500 : 6000);
+    return () => window.clearTimeout(id);
+  }, [copy]);
+
+  // mailto: does nothing on a computer without a mail app, so the address can be copied too.
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(identity.email);
+      setCopy("done");
+    } catch {
+      // No clipboard access (insecure context, permission denied): say so, so the visitor copies it by hand.
+      setCopy("failed");
+    }
+  };
 
   useEffect(() => {
     const root = rootRef.current;
@@ -77,7 +126,8 @@ export default function PortfolioNight({ lang, setLang }: Props) {
 
   const intro = (
     <header id="top" className={s.hero}>
-      <div className={s.heroInner}>
+      {/* The design switcher fades out while it would sit on top of this text. */}
+      <div className={s.heroInner} data-switcher-avoid="">
         <div className={`${s.portraits} ${s.enter}`}>
           <Image
             className={s.portrait}
@@ -88,10 +138,11 @@ export default function PortfolioNight({ lang, setLang }: Props) {
             sizes="(min-width: 1024px) 150px, 96px"
             priority
           />
+          {/* Same person as the first portrait, which already carries the name. */}
           <Image
             className={s.portrait}
             src="/night/lucas-2.webp"
-            alt={identity.name}
+            alt=""
             width={301}
             height={376}
             sizes="(min-width: 1024px) 150px, 96px"
@@ -153,11 +204,13 @@ export default function PortfolioNight({ lang, setLang }: Props) {
     <div ref={rootRef} className={s.root} data-screen-label="One Night">
       <div className={s.grain} aria-hidden="true" />
 
-      <nav className={s.nav} data-tone={tone} aria-label="Primary">
+      <nav ref={navRef} className={s.nav} data-tone={tone} aria-label="Primary">
         <a href="#top" className={s.brand}>
           Lucas Fanelli
         </a>
-        <span className={s.clock} aria-live="polite" aria-atomic="true">
+        {/* Decorative: every scene states its hour in its own heading, and announcing each change
+            while scrolling would only be noise for screen readers. */}
+        <span className={s.clock} aria-hidden="true">
           <span key={hour} className={s.clockDigits}>
             {hour}
           </span>
@@ -167,6 +220,29 @@ export default function PortfolioNight({ lang, setLang }: Props) {
           <a href="#work">{t(strings.nav.work)}</a>
           <a href="#about">{t(strings.nav.about)}</a>
           <a href="#contact">{t(strings.nav.contact)}</a>
+        </div>
+        {/* Phones: the links fold behind this button; without it, Contact is twenty screens away. */}
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className={s.menuButton}
+          aria-expanded={menuOpen}
+          aria-controls="night-menu"
+          aria-label={t(strings.nav.menu)}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span className={s.menuIcon} aria-hidden="true" />
+        </button>
+        <div id="night-menu" className={s.menu} hidden={!menuOpen}>
+          <a href="#work" onClick={() => setMenuOpen(false)}>
+            {t(strings.nav.work)}
+          </a>
+          <a href="#about" onClick={() => setMenuOpen(false)}>
+            {t(strings.nav.about)}
+          </a>
+          <a href="#contact" onClick={() => setMenuOpen(false)}>
+            {t(strings.nav.contact)}
+          </a>
         </div>
         <button
           type="button"
@@ -276,6 +352,15 @@ export default function PortfolioNight({ lang, setLang }: Props) {
               {identity.email}
             </a>
             <ul className={s.socials} data-reveal="">
+              <li>
+                <button type="button" onClick={copyEmail}>
+                  {t(strings.sections.copyEmail)}
+                </button>
+                <span className={s.copyStatus} role="status" data-state={copy}>
+                  {copy === "done" && `${t(strings.sections.copied)} ✓`}
+                  {copy === "failed" && t(strings.sections.copyFailed)}
+                </span>
+              </li>
               <li>
                 <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer">
                   LinkedIn ↗

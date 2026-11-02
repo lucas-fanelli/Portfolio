@@ -83,7 +83,8 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 28px;
+  /* Tighter on phones so brand, clock, menu and language fit down to 320px; 28px from 768px up. */
+  gap: 12px;
   padding: 14px var(--gutter);
   color: #efe7da;
   background: rgba(8, 8, 10, 0.55);
@@ -102,14 +103,23 @@
   border-bottom-color: rgba(31, 27, 23, 0.1);
 }
 
+/* Nav text links get a 44px-tall hit area; the negative margin keeps the bar's height as it was. */
 .brand {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  margin: -11px 0;
+  padding: 11px 0;
   font-family: var(--serif);
   font-size: 22px;
   line-height: 1;
   text-decoration: none;
+}
+
+@media (max-width: 359px) {
+  .brand {
+    font-size: 19px;
+  }
 }
 
 .clock {
@@ -160,6 +170,8 @@
 }
 
 .navLinks a {
+  margin: -11px 0;
+  padding: 11px 0;
   font-size: 14px;
   text-decoration: none;
   opacity: 0.8;
@@ -170,7 +182,9 @@
   opacity: 1;
 }
 
-.lang {
+.lang,
+.menuButton {
+  position: relative;
   min-width: 44px;
   min-height: 36px;
   padding: 6px 12px;
@@ -185,13 +199,119 @@
   transition: opacity 0.2s ease;
 }
 
-.lang:hover {
+/* The pills stay 36px tall to look right in the bar; this stretches their hit area to 44px. */
+.lang::after,
+.menuButton::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+
+.lang:hover,
+.menuButton:hover {
   opacity: 1;
 }
 
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Three lines that fold into a cross while the menu is open. */
+.menuIcon,
+.menuIcon::before,
+.menuIcon::after {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    transform 0.25s var(--ease),
+    background-color 0.2s ease;
+}
+
+.menuIcon {
+  position: relative;
+}
+
+.menuIcon::before,
+.menuIcon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.menuIcon::before {
+  top: -5px;
+}
+
+.menuIcon::after {
+  top: 5px;
+}
+
+.menuButton[aria-expanded="true"] .menuIcon {
+  background-color: transparent;
+}
+
+.menuButton[aria-expanded="true"] .menuIcon::before {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.menuButton[aria-expanded="true"] .menuIcon::after {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px var(--gutter) 18px;
+  background: rgba(8, 8, 10, 0.94);
+  border-bottom: 1px solid rgba(239, 231, 218, 0.08);
+}
+
+.menu[hidden] {
+  display: none;
+}
+
+.nav[data-tone="light"] .menu {
+  background: rgba(242, 235, 225, 0.97);
+  border-bottom-color: rgba(31, 27, 23, 0.1);
+}
+
+.menu a {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.menu a:last-child {
+  border-bottom: 0;
+}
+
 @media (min-width: 768px) {
+  .nav {
+    gap: 28px;
+  }
+
   .navLinks {
     display: flex;
+  }
+
+  .menuButton,
+  .menu {
+    display: none;
   }
 }
 
@@ -878,19 +998,42 @@
   list-style: none;
 }
 
-.socials a {
+.socials li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+}
+
+.socials a,
+.socials button {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
   font-family: var(--mono);
   font-size: 14px;
   text-decoration: none;
-  border-bottom: 1px solid var(--line);
+  cursor: pointer;
   transition: border-color 0.2s ease;
 }
 
-.socials a:hover {
+.socials a:hover,
+.socials button:hover {
   border-color: var(--accent);
+}
+
+.copyStatus {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.copyStatus[data-state="failed"] {
+  color: var(--muted);
 }
 
 .footer {

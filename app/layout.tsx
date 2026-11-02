@@ -93,9 +93,58 @@ export const viewport: Viewport = {
   ],
 };
 
+// The static HTML is the default (Minimal) design in English. A visitor who picked another design
+// or language (saved in localStorage, or linked with ?design=…&lang=…) would see that page flash
+// before React swaps theirs in. This runs before the first paint: it sets the page language, hides
+// the page on the design's own background until PortfolioApp clears `data-boot` (or after 4 s, if
+// the scripts never load, so the static page still shows), and starts loading the Night hero image
+// right away instead of after hydration. Keep the keys and values in sync with PortfolioApp.
+const BOOT = `(function () {
+  var h = document.documentElement;
+  var stored = {};
+  try {
+    stored = JSON.parse(localStorage.getItem("portfolio-tweaks") || "{}") || {};
+  } catch (e) {
+    /* storage blocked or malformed: the URL and the defaults decide, as in PortfolioApp */
+  }
+  var q = new URLSearchParams(location.search);
+  function pick(key, valid) {
+    var v = q.get(key);
+    if (valid.indexOf(v) >= 0) return v;
+    return valid.indexOf(stored[key]) >= 0 ? stored[key] : null;
+  }
+  var design = pick("design", ["navy", "terminal", "night"]);
+  var theme = pick("theme", ["light", "dark", "navy"]) || "dark";
+  var lang = pick("lang", ["en", "es"]);
+  if (lang) h.lang = lang;
+  var bg = design === "night" ? "#0b0c0e"
+    : design === "terminal" ? { dark: "#0b0e0a", light: "#f3efe3", navy: "#0a1a30" }[theme]
+    : null;
+  if (!bg) return;
+  h.dataset.boot = design;
+  h.style.setProperty("--boot-bg", bg);
+  setTimeout(function () { delete h.dataset.boot; }, 4000);
+  if (design === "night") {
+    var link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = "/night/house-kitchen.webp";
+    link.setAttribute("fetchpriority", "high");
+    document.head.appendChild(link);
+  }
+})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable} ${instrument.variable}`}>
+    // The boot script changes lang, data-boot and --boot-bg before hydration.
+    <html
+      lang="en"
+      className={`${inter.variable} ${jetbrains.variable} ${instrument.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: BOOT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

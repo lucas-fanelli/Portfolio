@@ -55,7 +55,8 @@
   pointer-events: none;
 }
 
-.clipVideo {
+/* The take's frame: a canvas fed by WebCodecs, or the <video> where that isn't available. */
+.clipFrame {
   position: absolute;
   left: 0;
   top: 0;
@@ -65,9 +66,13 @@
   object-fit: fill;
 }
 
+.clipFrame[hidden] {
+  display: none;
+}
+
 /* The phone cut is 1280×1260: the 16:9 frame on top fills the layer, and its baked-in blurred
    continuation (75% of the frame's height) hangs below it, like the stills' .ext. */
-.clipVideo[data-tall="1"] {
+.clipFrame[data-tall="1"] {
   height: 175%;
 }
 

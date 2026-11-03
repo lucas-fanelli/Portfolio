@@ -318,11 +318,14 @@ export default function PortfolioNight({ lang, setLang }: Props) {
             </a>
           </div>
         </div>
+        {/* Named in the language it switches to, and starting with the visible "ES"/"EN" so voice
+            control ("click ES") still finds it. */}
         <button
           type="button"
           className={s.lang}
           onClick={() => setLang(lang === "es" ? "en" : "es")}
-          aria-label={lang === "es" ? "Switch to English" : "Cambiar a español"}
+          lang={lang === "es" ? "en" : "es"}
+          aria-label={`${t(strings.nav.lang)} · ${lang === "es" ? "Switch to English" : "Cambiar a español"}`}
         >
           {t(strings.nav.lang)}
         </button>

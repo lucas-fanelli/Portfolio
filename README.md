@@ -52,9 +52,10 @@ npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm run cv          # print the one-page CVs (ES/EN) to public/cv/ with headless Chrome
 npm run og          # render the share cards public/og.jpg and og-es.jpg with headless Chrome
+npm run sizes       # write the smaller copies of the hero plate and portraits that srcset offers
 ```
 
-Requires Node 22 (the `cv` and `og` scripts import `lib/content.ts` directly). They look for Chrome at its default Windows path; set `CHROME` to use another binary. Re-run them after changing the content they print.
+Requires Node 22 (the `cv`, `og` and `sizes` scripts import files from `lib/` directly). `cv` and `og` look for Chrome at its default Windows path; set `CHROME` to use another binary. Re-run them after changing the content they print, and `sizes` after replacing one of the pictures it copies.
 
 ## Project structure
 
@@ -82,12 +83,13 @@ Requires Node 22 (the `cv` and `og` scripts import `lib/content.ts` directly). T
 │   ├── content.ts               bilingual content (identity, projects, …)
 │   ├── seo.ts                   per-language metadata + schema.org data
 │   ├── designs.ts               each design's background colour
+│   ├── imageLoader.ts           next/image loader: which pictures have smaller copies, for srcset
 │   ├── syntax.tsx               (unused) syntax tinter — kept for future
 │   └── useViewport.ts           breakpoint hook (mobile / tablet / desktop)
 ├── public/night/                One Night plates, portrait and Withdrawal captures (webp)
 ├── public/cv/                   the CV PDFs (from scripts/cv.mjs)
-├── scripts/                     cv.mjs, og.mjs (headless Chrome renders)
-├── next.config.mjs              output: "export"
+├── scripts/                     cv.mjs, og.mjs (headless Chrome renders), sizes.mjs (image copies)
+├── next.config.mjs              output: "export", image widths for srcset
 └── package.json
 ```
 

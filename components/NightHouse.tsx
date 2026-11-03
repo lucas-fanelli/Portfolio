@@ -294,6 +294,27 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
   // Takes ready to play; until a scene's is, its stills stand in.
   const takes = useRef<Partial<Record<Scene, Take>>>({});
 
+  // The plates and captures that aren't on screen at first wait until the page has loaded and gone
+  // idle (CSS keeps their images out of the layout until then), so the opening shot and the fonts
+  // get the connection to themselves.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const hasIdle = "requestIdleCallback" in window;
+    let idle = 0;
+    const release = () => {
+      const show = () => (stage.dataset.loaded = "");
+      idle = hasIdle ? window.requestIdleCallback(show, { timeout: 2000 }) : window.setTimeout(show, 200);
+    };
+    if (document.readyState === "complete") release();
+    else window.addEventListener("load", release, { once: true });
+    return () => {
+      window.removeEventListener("load", release);
+      if (hasIdle) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+  }, []);
+
   // Load each transition clip only when its scene is getting close, and never with reduced
   // motion or data saver on. Crossing the desktop/phone breakpoint later (a tablet turning) swaps
   // the loaded clips for the other cut, so phones never show a clip without its continuation.
@@ -798,7 +819,19 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       <div ref={stageRef} className={h.stage} aria-hidden="true">
         <div ref={frameRef} className={h.frame}>
           <div ref={kitchenRef} className={h.layer} style={plate(16 / 9)}>
-            <Image className={h.img} src="/night/house-kitchen.webp" alt="" width={4096} height={2304} priority />
+            {/* The opening shot (the page's largest paint). `sizes` is the layer's width (see .layer and
+                .frame): max(100vw, the frame's height × 16/9), the frame being 64svh tall on phones;
+                on larger screens the hero framing zooms it to 1.12×. */}
+            <Image
+              className={h.img}
+              src="/night/house-kitchen.webp"
+              alt=""
+              width={4096}
+              height={2304}
+              sizes="(min-width: 900px) and (min-aspect-ratio: 16/9) 112vw, (min-width: 900px) 199.12vh, (min-aspect-ratio: 1138/1000) 100vw, 113.78vh"
+              priority
+              fetchPriority="high"
+            />
             <Ext plate="house-kitchen" />
             <div className={h.lamp} />
           </div>

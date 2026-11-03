@@ -320,6 +320,11 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
   // Load each transition clip only when its scene is getting close, and never with reduced
   // motion or data saver on. Crossing the desktop/phone breakpoint later (a tablet turning) swaps
   // the loaded clips for the other cut, so phones never show a clip without its continuation.
+  // Nothing loads before the visitor first scrolls, touches or presses a key. On screens short
+  // enough for Remy to sit inside the margin at the top of the page, the stove take (4.7 MB on
+  // phones) used to download for everyone, including visitors who never scroll; taller ones
+  // already waited for the first scroll. On a Nothing Phone 2 at 9-20 Mbps, a reader's first drag
+  // still has the take ready about 1-3 s before Remy's zoom.
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
@@ -399,13 +404,21 @@ export default function NightHouse({ t, intro, workIntro, dawn: dawnIntro }: Pro
       },
       { rootMargin: "150% 0px" },
     );
-    for (const scene of Object.keys(CLIPS) as Scene[]) {
-      const el = segRefs.current[scene];
-      if (el) io.observe(el);
-    }
+    const INPUTS = ["scroll", "wheel", "touchstart", "pointerdown", "keydown"] as const;
+    const start = () => {
+      for (const type of INPUTS) window.removeEventListener(type, start);
+      for (const scene of Object.keys(CLIPS) as Scene[]) {
+        const el = segRefs.current[scene];
+        if (el) io.observe(el);
+      }
+    };
+    // A restored scroll position or a chapter link already counts as the visitor moving.
+    if (window.scrollY > 0) start();
+    else for (const type of INPUTS) window.addEventListener(type, start, { passive: true });
     const swap = () => wanted.forEach(load);
     desktop.addEventListener("change", swap);
     return () => {
+      for (const type of INPUTS) window.removeEventListener(type, start);
       io.disconnect();
       desktop.removeEventListener("change", swap);
       for (const ctl of Object.values(loading)) ctl?.abort();

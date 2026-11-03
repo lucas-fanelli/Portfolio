@@ -48,6 +48,14 @@
   visibility: hidden;
 }
 
+/* Hidden as they are, these layers sit over the viewport, so loading="lazy" still fetched every plate
+   and capture alongside the opening shot. They stay out of the layout until the page has loaded (see
+   `data-loaded` in NightHouse.tsx), then come in long before their scenes. */
+.stage:not([data-loaded]) :is(.close, .later) .img,
+.stage:not([data-loaded]) .reelShot {
+  display: none;
+}
+
 /* Scroll-scrubbed transition clip (see CLIPS in NightHouse.tsx). */
 .clip {
   opacity: 0;
@@ -519,6 +527,13 @@
   transition:
     transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
     filter 0.6s ease;
+}
+
+/* Hidden layers still fetch their backgrounds, so until the fridge is on screen the sprites leave the
+   plate alone: otherwise it downloads with the page, ahead of the opening shot. By the time the fridge
+   shows, its lazy <img> has already brought the same file in. */
+.close[data-on="0"] .sprite {
+  background-image: none;
 }
 
 .sprite[data-selected="true"] {

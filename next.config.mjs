@@ -4,7 +4,14 @@ import { fileURLToPath } from "node:url";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
-  images: { unoptimized: true },
+  // No image server in a static export: lib/imageLoader.ts points srcset at copies made ahead of time
+  // (`npm run sizes`). These are their widths, the plates' and the portraits'.
+  images: {
+    loader: "custom",
+    loaderFile: "./lib/imageLoader.ts",
+    deviceSizes: [1280, 1920, 2560, 3072, 4096],
+    imageSizes: [160, 320],
+  },
   trailingSlash: true,
   // "/" and "/es/" each have their own root layout (app/(en), app/(es)), so the 404 page needs its
   // own document too: app/global-not-found.tsx.

@@ -91,7 +91,9 @@ const SCREEN = { x: 0.4195, y: 0.4713, w: 0.1442, h: 0.1407 };
 /**
  * The camera moves through the house: one continuous Kling 3.0 Omni take per transition, scrubbed by
  * scroll (forwards on the way in, backwards on the way out). The kitchen takes start from the wide
- * kitchen plate alone (the walk is pinned to the desk frame at its end as well); the turn to the bed
+ * kitchen plate alone (the walk is pinned to the desk frame at its end as well, and the fridge to a
+ * still of the open fridge with its door on the right, opposite its handles: left to itself, Kling
+ * swung the door open on the handle side every time); the turn to the bed
  * starts from the desk frame, and the dawn time-lapse from the bed frame, with the camera locked
  * off. Each take's last frame is the plate it hands over to (stove, fridge, desk, bedroom, dawn), so
  * the camera really travels through one house and the stills never jump. Interpolated from 24 to 60 fps and encoded with every frame a
@@ -1028,15 +1030,17 @@ function StoveFx() {
 }
 
 // Item boxes on the open-fridge plate (fractions of the image, measured on the fridge take's last
-// frame), in the order of `strings.night.fridge.items`: milk, tomatoes, cheese, lettuce.
+// frame), in the order of `strings.night.fridge.items`: milk, tomatoes, cheese, lettuce. The door
+// opens to the right and hides the right edge of the cheese and the lettuce, so their boxes stop at
+// the door's shelves.
 // `label`: where its name goes. Above, unless that covers another item (the cheese sits against the
 // tomatoes, the lettuce right under them); "aboveDesktop" moves to the side on phones, where the
 // milk's top is right under the nav.
 const FRIDGE_ITEMS: { x: number; y: number; w: number; h: number; label: "above" | "right" | "aboveDesktop" }[] = [
-  { x: 0.555, y: 0.572, w: 0.056, h: 0.201, label: "aboveDesktop" },
-  { x: 0.59, y: 0.711, w: 0.065, h: 0.071, label: "above" },
-  { x: 0.642, y: 0.75, w: 0.036, h: 0.046, label: "right" },
-  { x: 0.591, y: 0.817, w: 0.086, h: 0.13, label: "right" },
+  { x: 0.556, y: 0.571, w: 0.055, h: 0.201, label: "aboveDesktop" },
+  { x: 0.591, y: 0.709, w: 0.065, h: 0.07, label: "above" },
+  { x: 0.643, y: 0.75, w: 0.018, h: 0.045, label: "right" },
+  { x: 0.591, y: 0.814, w: 0.069, h: 0.128, label: "right" },
 ];
 
 const pct = (v: number) => `${(v * 100).toFixed(3)}%`;

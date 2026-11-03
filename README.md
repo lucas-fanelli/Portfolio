@@ -15,7 +15,7 @@ Built as a static-exported Next.js app so it can be deployed anywhere (Vercel, G
 - **Persisted preferences.** Design / theme / language choices the visitor makes survive reloads via `localStorage`; query params override them, e.g. `/?design=terminal&theme=light`.
 - **Search and sharing.** schema.org `ProfilePage`/`Person` data, a sitemap with both languages, and share cards rendered from the One Night opening shot.
 - **Five projects.** Withdrawal (Unity 6 horror game), Remy (Next.js recipe app — live at [remy-recipes.com](https://remy-recipes.com)), SleepSync (Kotlin/Compose adaptive alarm), Heladera (offline-first shared grocery PWA — live at [heladera-ec2b4.web.app](https://heladera-ec2b4.web.app)) and JARVIS (local real-time voice assistant). Code snippets and ASCII architecture diagrams are extracted from the real repos — nothing mocked.
-- **AI ambience, real work.** One Night's room plates were generated with [Higgsfield](https://higgsfield.ai) (the site says so in its footer); the in-scene monitor shows real Withdrawal captures, and every snippet and diagram comes from the projects themselves.
+- **Real work, staged rooms.** One Night's room plates were made with [Higgsfield](https://higgsfield.ai) (credited in the footer); the in-scene monitor shows real Withdrawal captures, and every snippet and diagram comes from the projects themselves.
 - **Responsive across phone / tablet / desktop.** Fluid text sizing (`clamp` + viewport), stacked grids on narrow widths, hidden-vs-shown nav anchors; ASCII diagrams and code size themselves to their card instead of scrolling sideways.
 - **Smooth animations.** Sliding indicator on the design pill and the language toggle, scale + colour transitions on theme swatches, hover lift on contact cards.
 

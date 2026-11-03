@@ -45,6 +45,7 @@ export type Identity = {
   phone: string;
   linkedin: string;
   linkedinUrl: string;
+  certificationsUrl: string;
   github: string;
   githubUrl: string;
 };
@@ -135,6 +136,7 @@ export const identity: Identity = {
   phone: "+34 623 299 094",
   linkedin: "linkedin.com/in/lucasarielfanelli",
   linkedinUrl: "https://www.linkedin.com/in/lucasarielfanelli/",
+  certificationsUrl: "https://www.linkedin.com/in/lucasarielfanelli/details/certifications/",
   github: "github.com/lucas-fanelli",
   githubUrl: "https://github.com/lucas-fanelli",
 };
@@ -157,8 +159,8 @@ export const strings: Strings = {
       en: "Double degree · UMA · 3rd year",
     },
     intro: {
-      es: "Diseño y dirijo proyectos de software — videojuegos, apps móviles y web — usando IA como herramienta de apoyo, no como sustituto del criterio técnico. Me interesa la arquitectura limpia, los sistemas que sobreviven al refactor y aprender lo siguiente.",
-      en: "I design and direct software projects — games, mobile apps, and web — using AI as a support tool, not as a substitute for engineering judgement. I care about clean architecture, systems that survive refactors, and learning the next thing.",
+      es: "Diseño y desarrollo proyectos de software — videojuegos, apps móviles y web. Me interesa la arquitectura limpia, los sistemas que sobreviven al refactor y aprender lo siguiente.",
+      en: "I design and build software projects — games, mobile apps, and web. I care about clean architecture, systems that survive refactors, and learning the next thing.",
     },
     available: { es: "Abierto a ofertas", en: "Open to offers" },
     based: { es: "Remoto / Oficina", en: "Remote / Office" },
@@ -171,8 +173,8 @@ export const strings: Strings = {
   sections: {
     work: { es: "Proyectos seleccionados", en: "Selected work" },
     workNote: {
-      es: "Proyectos en producción y en desarrollo. Yo defino la arquitectura; la IA acelera la implementación.",
-      en: "Live and in-progress projects. I own the architecture; AI accelerates implementation.",
+      es: "Proyectos en producción y en desarrollo.",
+      en: "Live and in-progress projects.",
     },
     about: { es: "Sobre mí", en: "About" },
     education: { es: "Formación", en: "Education" },
@@ -223,8 +225,8 @@ export const strings: Strings = {
     chapters: { es: "La noche, hora por hora", en: "The night, hour by hour" },
     start: { es: "Inicio", en: "Start" },
     plateCredit: {
-      es: "Ambientes generados con IA (Higgsfield). Los proyectos, el código y los diagramas son reales.",
-      en: "Ambient plates generated with AI (Higgsfield). Projects, code and diagrams are real.",
+      es: "Ambientes creados con Higgsfield. Los proyectos, el código y los diagramas son reales.",
+      en: "Ambient plates made with Higgsfield. Projects, code and diagrams are real.",
     },
     hours: {
       dusk: { es: "anochece", en: "nightfall" },
@@ -626,11 +628,11 @@ export const projects: Project[] = [
       en: "Real-time local voice assistant",
     },
     summary: {
-      es: "Asistente de voz que corre entero en la PC, sin nube: le hablás en español y responde en voz, en inglés. Un pipeline propio —detección de turno, STT, router, LLM local y TTS en streaming— donde cada milisegundo se mide y queda registrado.",
-      en: "A voice assistant that runs entirely on the PC, no cloud: you speak Spanish and it answers aloud in English. A hand-built pipeline — turn detection, STT, router, local LLM and streaming TTS — where every millisecond is measured and logged.",
+      es: "Asistente de voz que corre entero en la PC, sin nube: le hablás en español o en inglés y responde en voz, en el idioma que le pidas. Un pipeline propio —detección de turno, STT, router, LLM local y TTS en streaming— donde cada milisegundo se mide y queda registrado.",
+      en: "A voice assistant that runs entirely on the PC, no cloud: you can speak to it in Spanish or English and it answers aloud in the language you ask for. A hand-built pipeline — turn detection, STT, router, local LLM and streaming TTS — where every millisecond is measured and logged.",
     },
     role: { es: "Arquitectura · pipeline de voz · medición", en: "Architecture · voice pipeline · benchmarking" },
-    stack: ["Python 3.12", "asyncio", "Ollama · gemma4", "Parakeet STT", "ONNX Runtime"],
+    stack: ["Python 3.12", "asyncio", "Ollama · gemma4", "Whisper STT", "ONNX Runtime"],
     platform: "Windows · local",
     status: "active",
     philosophy: {
@@ -663,7 +665,7 @@ export const projects: Project[] = [
     },
     diagram: [
       "  mic ─▶ VAD/turn ─▶ STT ─▶ router ─┬─▶ fast-path (regex)",
-      "                    Parakeet        │     ─▶ action + canned reply",
+      "                    Whisper         │     ─▶ action + canned reply",
       "                                    │",
       "                                    └─▶ LLM stream · Ollama gemma4",
       "                                          ─▶ clause chunker",

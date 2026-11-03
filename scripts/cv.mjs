@@ -14,6 +14,7 @@ import { fileUrl, renderWithChrome } from "./chrome.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = "portfolio-lucasfanelli.com";
 const project = (id) => projects.find((p) => p.id === id);
+const certs = (label) => `<a href="${identity.certificationsUrl}">${label}</a>`;
 
 const CV = {
   es: {
@@ -39,7 +40,7 @@ const CV = {
         id: "jarvis",
         title: "JARVIS — asistente de voz local",
         stack: "Python · Ollama · ONNX Runtime",
-        text: "Asistente de voz que funciona entero en la PC, sin nube: reconoce la voz, piensa con un LLM local y responde hablando.",
+        text: "Asistente de voz que funciona entero en la PC, sin nube: entiende español e inglés, piensa con un LLM local y responde hablando.",
       },
     ],
     job: {
@@ -59,10 +60,10 @@ const CV = {
       ["Lenguajes", "TypeScript · Python · Kotlin · C# · Java · C"],
       ["Web y datos", "React · Next.js · Firebase · PostgreSQL"],
       ["Prácticas", "Clean Architecture · SOLID · TDD · CI/CD"],
-      ["IA", "desarrollo asistido por IA (Claude&nbsp;Code) · LLMs locales"],
+      ["Claude y Claude&nbsp;Code", `Conocimientos y varias certificaciones<br>${certs("Ver certificaciones")}`],
       ["Idiomas", "español nativo · inglés avanzado"],
     ],
-    interests: "AI Engineering, arquitectura de software, desarrollo de videojuegos y de apps móviles.",
+    interests: "Aprendizaje y experimentación continuos en AI Engineering. Arquitectura de software, videojuegos y apps móviles.",
   },
   en: {
     file: "lucas-fanelli-cv-en.pdf",
@@ -87,7 +88,7 @@ const CV = {
         id: "jarvis",
         title: "JARVIS — local voice assistant",
         stack: "Python · Ollama · ONNX Runtime",
-        text: "A voice assistant that runs entirely on the PC, no cloud: it recognizes speech, thinks with a local LLM and answers out loud.",
+        text: "A voice assistant that runs entirely on the PC, no cloud: it understands Spanish and English, thinks with a local LLM and answers out loud.",
       },
     ],
     job: {
@@ -107,10 +108,10 @@ const CV = {
       ["Languages", "TypeScript · Python · Kotlin · C# · Java · C"],
       ["Web and data", "React · Next.js · Firebase · PostgreSQL"],
       ["Practices", "Clean Architecture · SOLID · TDD · CI/CD"],
-      ["AI", "AI-assisted development (Claude&nbsp;Code) · local LLMs"],
+      ["Claude and Claude&nbsp;Code", `Knowledge and several certifications<br>${certs("View certifications")}`],
       ["Spoken", "Spanish (native) · English (advanced)"],
     ],
-    interests: "AI Engineering, software architecture, game and mobile app development.",
+    interests: "Continuous learning and experimentation in AI Engineering. Software architecture, games and mobile apps.",
   },
 };
 
